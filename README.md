@@ -21,7 +21,7 @@ sudo yum install libevent-devel openssl-devel python-devel libtool git patch mak
 # download the latest tested pgbouncer distribution - 1.14
 git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_14_0"
 
-# download pgbouncer-ps extensions
+# download pgbouncer-ps extensions - tag v1.14.0+1 (streaming support on main branch is highly experimental)
 git clone git@github.com:topicus-education-ops/pgbouncer-ps-patch.git
 
 # merge pgbouncer-ps extensions into pgbouncer code
