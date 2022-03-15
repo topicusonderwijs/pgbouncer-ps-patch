@@ -4,7 +4,7 @@ E.g. the flow used by the PostgreSQL JDBC driver to create server prepared state
 
 # Getting Started
 
-**Install**  
+### Install
 Download and install pgbouncer-ps by running the following commands (RHEL/CentOS):
 ```
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
@@ -30,7 +30,7 @@ make
 sudo make install
 ```
 
-**Configure**  
+### Configure
 Create a configuration file, using `./etc/pgbouncer.ini` as a starting point.
 
 By default, prepared statement support is not enabled. To enable it just add the following to your pgbouncer-ps configuration:
@@ -44,7 +44,7 @@ prepared_statement_cache_queries = 100
 ```
 Note: keep in mind that this will increase the memory footprint of each client connection on your PostgreSQL server.
 
-**Connect**
+### Connect
 Configure your client application as though you were connecting directly to a PostgreSQL database.
 
 Example - JDBC driver
