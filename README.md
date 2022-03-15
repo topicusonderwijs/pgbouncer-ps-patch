@@ -1,4 +1,6 @@
 # PgBouncer with prepared statement support
+This patch **only** supports the extended query protocol parse, bind, execute and close flow.
+E.g. the flow used by the PostgreSQL JDBC driver to create server prepared statements.
 
 # Getting Started
 
@@ -41,3 +43,12 @@ The number of prepared statements kept active on a single backend connection is 
 prepared_statement_cache_queries = 100
 ```
 Note: keep in mind that this will increase the memory footprint of each client connection on your PostgreSQL server.
+
+**Connect**
+Configure your client application as though you were connecting directly to a PostgreSQL database.
+
+Example - JDBC driver
+```
+jdbc:postgresql://pgbouncer-ps:6432/postgres?prepareThreshold=10&preparedStatementCacheQueries=512&preparedStatementCacheSizeMiB=10
+```
+Note: Cached prepared statements by the JDBC driver will increase the memory footprint of each JDBC connection in your application and each frontend connection in PgBouncer.
