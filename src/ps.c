@@ -206,6 +206,42 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
   return true;
 }
 
+bool handle_describe_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
+{
+  SBuf *sbuf = &client->sbuf;
+  PgSocket *server = client->link;
+  PgParsedPreparedStatement *ps = NULL;
+  PgServerPreparedStatement *link_ps = NULL;
+  PktBuf *buf;
+
+  Assert(server);
+
+  HASH_FIND_STR(client->prepared_statements, ps_name, ps);
+  if (!ps) {
+    disconnect_client(client, true, "prepared statement '%s' not found", ps_name);
+	  return false;
+  }
+
+  HASH_FIND(hh, client->link->server_prepared_statements, ps->query_hash, sizeof(ps->query_hash), link_ps);
+
+  // TODO: link_ps missing -> no parse, should not be possible
+
+  sbuf_prepare_skip(sbuf, pkt->len);
+  if (!sbuf_flush(sbuf))
+    return false;
+
+  slog_debug(client, "handle_describe_command: mapped statement '%s' (query hash '%ld%ld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
+
+  buf = create_describe_packet(link_ps->name);
+
+  if (!pktbuf_send_immediate(buf, server))
+    return false;
+
+  pktbuf_free(buf);
+
+  return true;
+}
+
 bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket *close_packet)
 {
   SBuf *sbuf = &client->sbuf;

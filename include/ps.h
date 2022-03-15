@@ -18,6 +18,7 @@ typedef struct PgServerPreparedStatement
 
 bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name);
 bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name);
+bool handle_describe_command(PgSocket *client, PktHdr *pkt, const char *ps_name);
 bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket *close_packet);
 
 void ps_client_free(PgSocket *client);

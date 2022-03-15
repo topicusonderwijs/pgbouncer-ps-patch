@@ -1,5 +1,5 @@
 diff --git a/src/client.c b/src/client.c
-index 28c6556..dcd5ec8 100644
+index 28c6556..c3302f7 100644
 --- a/src/client.c
 +++ b/src/client.c
 @@ -810,6 +810,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
@@ -12,7 +12,7 @@ index 28c6556..dcd5ec8 100644
  
  	switch (pkt->type) {
  
-@@ -843,9 +846,56 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -843,10 +846,71 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	 * to buffer packets until sync or flush is sent by client
  	 */
  	case 'P':		/* Parse */
@@ -67,9 +67,24 @@ index 28c6556..dcd5ec8 100644
 +    break;
 +
  	case 'D':		/* Describe */
++    if (!cf_disable_prepared_statement_support) {
++      if (!inspect_describe_packet(client, pkt, &ps_name))
++        return false;
++
++      if (ps_name) {
++        HASH_FIND_STR(client->prepared_statements, ps_name, ps);
++        if (!ps) {
++          slog_error(client, "lookup failed for prepared statement '%s'", ps_name);
++          disconnect_client(client, true, "prepared statement '%s' not found", ps_name);
++          return false;
++        }
++      }
++    }
++    break;
  	case 'd':		/* CopyData(F/B) */
  		break;
-@@ -860,7 +910,7 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ 
+@@ -860,7 +924,7 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  		return false;
  	}
  
@@ -78,7 +93,7 @@ index 28c6556..dcd5ec8 100644
  	if (!client->query_start) {
  		client->pool->stats.query_count++;
  		client->query_start = get_cached_time();
-@@ -890,6 +940,23 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -890,6 +954,29 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	client->link->ready = false;
  	client->link->idle_tx = false;
  
@@ -93,6 +108,12 @@ index 28c6556..dcd5ec8 100644
 +
 +      case 'B':
 +        if (!handle_bind_command(client, pkt, ps_name))
++          return false;
++        free((char *)ps_name);
++        return true;
++
++      case 'D':
++        if (!handle_describe_command(client, pkt, ps_name))
 +          return false;
 +        free((char *)ps_name);
 +        return true;

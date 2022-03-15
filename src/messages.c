@@ -72,6 +72,49 @@ bool inspect_bind_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
 	  return false;
 }
 
+bool inspect_describe_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
+{
+  const uint8_t *ptr;
+  char describe;
+  const char *statement;
+
+  if (incomplete_pkt(pkt))
+    return false;
+
+  mbuf_rewind_reader(&pkt->data);
+
+  /* Start at 5, because we skip the 'D' and the 4 bytes which are the length of the message */
+  if (!mbuf_get_bytes(&pkt->data, 5, &ptr))
+    goto failed;
+
+  if (!mbuf_get_char(&pkt->data, &describe))
+    goto failed;
+
+  if (describe == 'S') {
+    if (!mbuf_get_string(&pkt->data, &statement))
+      goto failed;
+
+    if (strlen(statement) > 0) {
+      slog_noise(client, "inspect_describe_packet: type=%c, len=%d, P/S=%c, statement=%s", pkt->type, pkt->len, describe, statement);
+      *dst_p = strdup(statement);
+    } else {
+      *dst_p = NULL;
+      slog_noise(client, "inspect_descibe_packet: type=%c, len=%d, P/S=%c, statement=<empty>", pkt->type, pkt->len, describe);
+    }
+  } else {
+    *dst_p = NULL;
+    slog_noise(client, "inspect_descibe_packet: type=%c, len=%d, P/S=%c", pkt->type, pkt->len, describe);
+  }
+
+  mbuf_rewind_reader(&pkt->data);
+
+  return true;
+
+	failed:
+    disconnect_client(client, true, "broken Describe packet");
+	  return false;
+}
+
 bool unmarshall_parse_packet(PgSocket *client, PktHdr *pkt, PgParsePacket **parse_packet_p)
 {
   const uint8_t *ptr;
@@ -173,6 +216,17 @@ PktBuf *create_parse_complete_packet(void)
   PktBuf *buf;
   buf = pktbuf_dynamic(5);
   pktbuf_start_packet(buf, '1');
+  pktbuf_finish_packet(buf);
+  return buf;
+}
+
+PktBuf *create_describe_packet(char *statement)
+{
+  PktBuf *buf;
+  buf = pktbuf_dynamic(6 + strlen(statement));
+  pktbuf_start_packet(buf, 'D');
+  pktbuf_put_char(buf, 'S');
+  pktbuf_put_string(buf, statement);
   pktbuf_finish_packet(buf);
   return buf;
 }
