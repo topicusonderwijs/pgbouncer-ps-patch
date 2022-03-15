@@ -46,7 +46,7 @@ static int bind_count_sort(struct PgServerPreparedStatement *a, struct PgServerP
     return (a->bind_count - b->bind_count);
 }
 
-static void register_prepared_statement(PgSocket *server, PgServerPreparedStatement *stmt)
+static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatement *stmt)
 {
   struct PgServerPreparedStatement *current, *tmp;
   PktBuf *buf;
@@ -61,8 +61,8 @@ static void register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 
       buf = create_close_packet(current->name);
 
-      // TODO: error handling
-      pktbuf_send_immediate(buf, server);
+      if (!pktbuf_send_immediate(buf, server))
+        return false;
 
       pktbuf_free(buf);
 
@@ -75,6 +75,8 @@ static void register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 
   slog_noise(server, "prepared statement '%s' added to server cache, %d cached items", stmt->name, cached_query_count + 1);
   HASH_ADD(hh, server->server_prepared_statements, query_hash, sizeof(stmt->query_hash), stmt);
+
+  return true;
 }
 
 bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
@@ -89,11 +91,11 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
   Assert(server);
 
-  /* update stats */
-  client->pool->stats.ps_client_parse_count++;
-
   if (!unmarshall_parse_packet(client, pkt, &pp))
     return false;
+
+  /* update stats */
+  client->pool->stats.ps_client_parse_count++;
 
   ps = create_prepared_statement(pp);
   // slog_noise(client, "P packet received, stmt %s, query hash '%ld%ld', query '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], ps->pkt->query);
@@ -136,7 +138,8 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
     /* Register statement on client and server link */
     HASH_ADD_KEYPTR(hh, client->prepared_statements, ps->name, strlen(ps->name), ps);
-    register_prepared_statement(server, link_ps);
+    if (!register_prepared_statement(server, link_ps))
+      return false;
   }
 
   return true;
@@ -187,7 +190,8 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
       return false;
 
     /* Register statement on server link */
-    register_prepared_statement(server, link_ps);
+    if (!register_prepared_statement(server, link_ps))
+      return false;
   }
 
   slog_debug(client, "handle_bind_command: mapped statement '%s' (query hash '%ld%ld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);

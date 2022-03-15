@@ -1,11 +1,25 @@
 #include "bouncer.h"
 
+static bool handle_incomplete_packet(PgSocket *client, PktHdr *pkt)
+{
+  if (incomplete_pkt(pkt))
+  {
+    /* 256 is magic number: packet does fit in buffer, but buffer not filled by sync process somehow */
+    if ((int)pkt->len > (int)cf_sbuf_len - 256) {
+      slog_error(client, "Packet length (%d) bigger than buffer size (%d - 256)", pkt->len, cf_sbuf_len);
+      disconnect_client(client, false, "Query too large for buffer - disconnecting");
+    }
+    return false;
+  }
+  return true;
+}
+
 bool inspect_parse_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
 {
   const uint8_t *ptr;
   const char *statement;
 
-  if (incomplete_pkt(pkt))
+  if (!handle_incomplete_packet(client, pkt))
     return false;
 
   mbuf_rewind_reader(&pkt->data);
@@ -40,7 +54,7 @@ bool inspect_bind_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
   const char *portal;
   const char *statement;
 
-  if (incomplete_pkt(pkt))
+  if (!handle_incomplete_packet(client, pkt))
     return false;
 
   mbuf_rewind_reader(&pkt->data);
@@ -78,7 +92,7 @@ bool inspect_describe_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
   char describe;
   const char *statement;
 
-  if (incomplete_pkt(pkt))
+if (!handle_incomplete_packet(client, pkt))
     return false;
 
   mbuf_rewind_reader(&pkt->data);
@@ -123,9 +137,8 @@ bool unmarshall_parse_packet(PgSocket *client, PktHdr *pkt, PgParsePacket **pars
   uint16_t num_parameters;
   const uint8_t *parameter_types_bytes;
 
-  if (incomplete_pkt(pkt)) {
+  if (!handle_incomplete_packet(client, pkt))
     return false;
-  }
 
   mbuf_rewind_reader(&pkt->data);
 
@@ -166,7 +179,7 @@ bool unmarshall_close_packet(PgSocket *client, PktHdr *pkt, PgClosePacket **clos
   char type;
   const char *name;
 
-  if (incomplete_pkt(pkt))
+  if (!handle_incomplete_packet(client, pkt))
     return false;
 
   mbuf_rewind_reader(&pkt->data);
@@ -260,7 +273,7 @@ bool copy_bind_packet(PgSocket *client, PktBuf **buf_p, char *remapped_statement
   uint16_t i, len, val;
   uint32_t val32;
 
-  if (incomplete_pkt(pkt))
+  if (!handle_incomplete_packet(client, pkt))
     return false;
 
   mbuf_rewind_reader(&pkt->data);
