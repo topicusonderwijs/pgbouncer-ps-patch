@@ -52,7 +52,9 @@ prepared_statement_cache_queries = 100
 ```
 Note: keep in mind that this will increase the memory footprint of each client connection on your PostgreSQL server.
 
-### Connect
+Tracking prepared statements does not only come with a memory cost, but also with increased cpu usage. Multiple PgBouncer instances can be run to use more than one core for processing, see `so_reuseport` socket option.
+
+### Connect the application
 Configure your client application as though you were connecting directly to a PostgreSQL database.
 
 Example - JDBC driver
