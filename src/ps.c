@@ -61,8 +61,10 @@ static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 
       buf = create_close_packet(current->name);
 
-      if (!pktbuf_send_immediate(buf, server))
+      if (!pktbuf_send_immediate(buf, server)) {
+        pktbuf_free(buf);
         return false;
+      }
 
       pktbuf_free(buf);
 
@@ -110,9 +112,14 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
     /* Statement already prepared on this link, do not forward packet */
     slog_debug(client, "handle_parse_command: mapping statement '%s' to '%s' (query hash '%ld%ld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
 
-    if (!pktbuf_send_immediate(create_parse_complete_packet(), client))
+    buf = create_parse_complete_packet();
+    if (!pktbuf_send_immediate(buf, client)) {
+      pktbuf_free(buf);
       return false;
+    }
 
+    pktbuf_free(buf);
+    
     /* Register statement on client link */
     HASH_ADD_KEYPTR(hh, client->prepared_statements, ps->name, strlen(ps->name), ps);
   } else {
@@ -131,8 +138,10 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
     opp->ignore = false;
     list_append(&server->server_outstanding_parse_packets, &opp->node);
     
-    if (!pktbuf_send_immediate(buf, server))
+    if (!pktbuf_send_immediate(buf, server)) {
+      pktbuf_free(buf);
       return false;
+    }
 
     pktbuf_free(buf);
 
@@ -186,8 +195,12 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
     opp = calloc(sizeof *opp, 1);
     opp->ignore = true;
     list_append(&server->server_outstanding_parse_packets, &opp->node);
-    if (!pktbuf_send_immediate(buf, server))
+    if (!pktbuf_send_immediate(buf, server)) {
+      pktbuf_free(buf);
       return false;
+    }
+
+    pktbuf_free(buf);
 
     /* Register statement on server link */
     if (!register_prepared_statement(server, link_ps))
@@ -196,11 +209,15 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
   slog_debug(client, "handle_bind_command: mapped statement '%s' (query hash '%ld%ld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
 
-  if (!copy_bind_packet(client, &buf, link_ps->name, pkt))
+  if (!copy_bind_packet(client, &buf, link_ps->name, pkt)) {
+    pktbuf_free(buf);
     return false;
+  }
 
-  if (!pktbuf_send_immediate(buf, server))
+  if (!pktbuf_send_immediate(buf, server)) {
+    pktbuf_free(buf);
     return false;
+  }
 
   pktbuf_free(buf);
 
@@ -238,8 +255,10 @@ bool handle_describe_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
   buf = create_describe_packet(link_ps->name);
 
-  if (!pktbuf_send_immediate(buf, server))
+  if (!pktbuf_send_immediate(buf, server)) {
+    pktbuf_free(buf);
     return false;
+  }
 
   pktbuf_free(buf);
 
@@ -266,8 +285,10 @@ bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket
     
     buf = create_close_complete_packet();
 
-    if (!pktbuf_send_immediate(buf, client))
+    if (!pktbuf_send_immediate(buf, client)) {
+      pktbuf_free(buf);
       return false;
+    }
 
     pktbuf_free(buf);
   }
