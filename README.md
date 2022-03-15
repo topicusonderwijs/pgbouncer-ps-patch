@@ -3,7 +3,11 @@
 
 
 # PgBouncer with prepared statement support
-This patch **only** supports the extended query protocol parse, bind, execute and close flow.
+Unfortunately [PgBouncer](https://www.pgbouncer.org/) does not support prepared statements in transaction pooling mode, as stated in the FAQ:
+> To make prepared statements work in this mode would need PgBouncer to keep track of them internally, which it does not do. So the only way to keep using PgBouncer in this mode is to disable prepared statements in the client.
+
+This patch introduces prepared statement tracking, allowing to run PgBouncer in transaction pooling mode with server side prepared statements. It 
+**only** supports the extended query protocol parse, bind, execute and close flow.
 E.g. the flow used by the PostgreSQL JDBC driver to create server prepared statements.
 
 # Getting Started
