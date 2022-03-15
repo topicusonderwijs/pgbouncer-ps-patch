@@ -1,16 +1,34 @@
 diff --git a/include/bouncer.h b/include/bouncer.h
-index 4701aec..7207359 100644
+index 4701aec..43c1c18 100644
 --- a/include/bouncer.h
 +++ b/include/bouncer.h
-@@ -101,6 +101,7 @@ typedef union PgAddr PgAddr;
+@@ -89,6 +89,14 @@ enum SSLMode {
+ 	SSLMODE_VERIFY_FULL
+ };
+ 
++enum PacketCallbackFlag {
++  CB_NONE,
++  CB_WANT_COMPLETE_PACKET,
++  CB_HANDLE_COMPLETE_PACKET,
++  CB_REWRITE_PACKET
++};
++
++
+ #define is_server_socket(sk) ((sk)->state >= SV_FREE)
+ 
+ 
+@@ -99,8 +107,10 @@ typedef struct PgPool PgPool;
+ typedef struct PgStats PgStats;
+ typedef union PgAddr PgAddr;
  typedef enum SocketState SocketState;
++typedef enum PacketCallbackFlag PacketCallbackFlag;
  typedef struct PktHdr PktHdr;
  typedef struct ScramState ScramState;
 +typedef struct PgPreparedStatement PgPreparedStatement;
  
  extern int cf_sbuf_len;
  
-@@ -123,6 +124,8 @@ extern int cf_sbuf_len;
+@@ -123,6 +133,8 @@ extern int cf_sbuf_len;
  #include "janitor.h"
  #include "hba.h"
  #include "pam.h"
@@ -19,7 +37,7 @@ index 4701aec..7207359 100644
  
  #ifndef WIN32
  #define DEFAULT_UNIX_SOCKET_DIR "/tmp"
-@@ -234,6 +237,10 @@ struct PgStats {
+@@ -234,6 +246,10 @@ struct PgStats {
  	usec_t xact_time;	/* total transaction time in us */
  	usec_t query_time;	/* total query time in us */
  	usec_t wait_time;	/* total time clients had to wait */
@@ -30,7 +48,7 @@ index 4701aec..7207359 100644
  };
  
  /*
-@@ -360,6 +367,10 @@ struct PgDatabase {
+@@ -360,6 +376,10 @@ struct PgDatabase {
  	struct AATree user_tree;	/* users that have been queried on this database */
  };
  
@@ -41,7 +59,7 @@ index 4701aec..7207359 100644
  
  /*
   * A client or server connection.
-@@ -433,6 +444,12 @@ struct PgSocket {
+@@ -433,6 +453,22 @@ struct PgSocket {
  
  	VarCache vars;		/* state of interesting server parameters */
  
@@ -49,12 +67,22 @@ index 4701aec..7207359 100644
 +
 +  uint64_t nextUniquePreparedStatementID;
 +  PgServerPreparedStatement *server_prepared_statements;
++
 +  struct List server_outstanding_parse_packets;
++
++  /* cb state during SBUF_EV_PKT_CALLBACK processing */
++  struct CallbackState {
++    PacketCallbackFlag flag:8; 
++    struct MBuf *complete_pkt;
++    PktHdr *pkt_header;
++    unsigned pkt_offset;
++  } packet_cb_state;
++
 +
  	SBuf sbuf;		/* stream buffer, must be last */
  };
  
-@@ -546,6 +563,9 @@ extern char *cf_server_tls_cert_file;
+@@ -546,6 +582,9 @@ extern char *cf_server_tls_cert_file;
  extern char *cf_server_tls_key_file;
  extern char *cf_server_tls_ciphers;
  

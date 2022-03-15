@@ -1,16 +1,19 @@
 diff --git a/src/objects.c b/src/objects.c
-index af5b167..68c9af0 100644
+index af5b167..ba475cf 100644
 --- a/src/objects.c
 +++ b/src/objects.c
-@@ -84,6 +84,7 @@ static void construct_client(void *obj)
+@@ -83,7 +83,10 @@ static void construct_client(void *obj)
+ 	memset(client, 0, sizeof(PgSocket));
  	list_init(&client->head);
  	sbuf_init(&client->sbuf, client_proto);
++  client->packet_cb_state.complete_pkt = malloc(sizeof(struct MBuf));
++  client->packet_cb_state.pkt_header = malloc(sizeof(struct PktHdr));
  	client->state = CL_FREE;
 +  client->prepared_statements = NULL;
  }
  
  static void construct_server(void *obj)
-@@ -94,6 +95,9 @@ static void construct_server(void *obj)
+@@ -94,6 +97,9 @@ static void construct_server(void *obj)
  	list_init(&server->head);
  	sbuf_init(&server->sbuf, server_proto);
  	server->state = SV_FREE;
@@ -20,15 +23,17 @@ index af5b167..68c9af0 100644
  }
  
  /* compare string with PgUser->name, for usage with btree */
-@@ -179,6 +183,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
+@@ -179,6 +185,9 @@ void change_client_state(PgSocket *client, SocketState newstate)
  	case CL_FREE:
  		varcache_clean(&client->vars);
  		slab_free(client_cache, client);
++    free(client->packet_cb_state.complete_pkt);
++    free(client->packet_cb_state.pkt_header);
 +    ps_client_free(client);
  		break;
  	case CL_JUSTFREE:
  		statlist_append(&justfree_client_list, &client->head);
-@@ -240,6 +245,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
+@@ -240,6 +249,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
  	case SV_FREE:
  		varcache_clean(&server->vars);
  		slab_free(server_cache, server);

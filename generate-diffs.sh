@@ -18,6 +18,7 @@ MERGEFILES="\
   src/server.c\
   src/stats.c\
   include/bouncer.h\
+  include/proto.h\
   include/sbuf.h\
   "
 
