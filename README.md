@@ -35,7 +35,7 @@ Create a configuration file, using `./etc/pgbouncer.ini` as a starting point.
 
 By default, prepared statement support is not enabled. To enable it just add the following to your pgbouncer-ps configuration:
 ```
-disable_prepared_statement_support = 1
+disable_prepared_statement_support = 0
 ```
 
 The number of prepared statements kept active on a single backend connection is defined by the following configuration:
