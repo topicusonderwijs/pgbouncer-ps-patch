@@ -70,3 +70,11 @@ Note: Cached prepared statements by the JDBC driver will increase the memory foo
 PgBouncer has client connections (application :left_right_arrow: PgBouncer) and server connections (PgBouncer :left_right_arrow: PostgreSQL). Prepared statements received with a 'parse' command are stored on the receiving client connection together with a hash of the sql. Parse commands sent to PostgreSQL are modified to have a unique prepared statement name for the server connection. The server connection stores the sql hash and the prepared statement name unique to that server connection.
 
 Whenever a client connection receives a command involving a prepared statement, it does a lookup to get the prepared statement metadata (sql sent by the parse command and the sql hash). The server connection maps this sql hash to the prepared statement name unique to that server connection and modifies the prepared statement name before sending the command to PostgreSQL. If the sql hash cannot be found for the server connection, this means we are on a different server connection than the one we originally issued the parse command on. In this case, a parse command is generated and sent first.
+
+# Related work
+An effort is being made to improve Postgres connection scalability:
+- [Improving Postgres Connection Scalability: Snapshots](https://techcommunity.microsoft.com/t5/azure-database-for-postgresql/improving-postgres-connection-scalability-snapshots/ba-p/1806462) by Microsoft
+- Postgres [mailing list](https://www.postgresql.org/message-id/20200301083601.ews6hz5dduc3w2se%40alap3.anarazel.de) thread
+- Postgres 14 [release notes](https://www.postgresql.org/docs/release/14.0/)
+  > Improve the speed of computing MVCC visibility snapshots on systems with many CPUs and high session counts (Andres Freund)</br>
+    This also improves performance when there are many idle sessions.
