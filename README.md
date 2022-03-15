@@ -1,0 +1,1 @@
+# PgBouncer with prepared statement support

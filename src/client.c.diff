@@ -1,0 +1,104 @@
+diff --git a/src/client.c b/src/client.c
+index cfa6ca6..2a86a67 100644
+--- a/src/client.c
++++ b/src/client.c
+@@ -813,6 +813,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ {
+ 	SBuf *sbuf = &client->sbuf;
+ 	int rfq_delta = 0;
++  const char *ps_name;
++  PgParsedPreparedStatement *ps = NULL;
++  PgClosePacket *close_packet;
+ 
+ 	switch (pkt->type) {
+ 
+@@ -846,9 +849,56 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ 	 * to buffer packets until sync or flush is sent by client
+ 	 */
+ 	case 'P':		/* Parse */
++    if (!cf_disable_prepared_statement_support) {
++      if (!inspect_parse_packet(client, pkt, &ps_name))
++        return false;
++    }
++    break;
++
+ 	case 'E':		/* Execute */
++    break;
++
+ 	case 'C':		/* Close */
++    if (!cf_disable_prepared_statement_support) {
++      if (!unmarshall_close_packet(client, pkt, &close_packet))
++        return false;
++
++      // TODO: move to ps.c
++      if (close_packet) {
++        slog_debug(client, "close (C) packet received: type=%c, name=%s", close_packet->type, close_packet->name);
++        if (close_packet->type == 'S' && strlen(close_packet->name) > 0) {
++          HASH_FIND_STR(client->prepared_statements, close_packet->name, ps);
++          if (ps) {
++            slog_noise(client, "removed '%s' from cached prepared statements, items remaining %u", close_packet->name, HASH_COUNT(client->prepared_statements));
++            HASH_DELETE(hh, client->prepared_statements, ps);
++            parse_packet_free(ps->pkt);
++            free(ps);
++
++            // TODO: send CloseComplete msg to client
++          }
++          free(close_packet->name);
++          free(close_packet);
++        }
++      }
++    }
++    break;
++
+ 	case 'B':		/* Bind */
++    if (!cf_disable_prepared_statement_support) {
++      if (!inspect_bind_packet(client, pkt, &ps_name))
++        return false;
++
++      if (ps_name) {
++        HASH_FIND_STR(client->prepared_statements, ps_name, ps);
++        if (!ps) {
++          slog_error(client, "lookup failed for prepared statement '%s'", ps_name);
++          disconnect_client(client, true, "prepared statement '%s' not found", ps_name);
++          return false;
++        }
++      }
++    }
++    break;
++
+ 	case 'D':		/* Describe */
+ 	case 'd':		/* CopyData(F/B) */
+ 		break;
+@@ -863,7 +913,7 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ 		return false;
+ 	}
+ 
+-	/* update stats */
++  /* update stats */
+ 	if (!client->query_start) {
+ 		client->pool->stats.query_count++;
+ 		client->query_start = get_cached_time();
+@@ -893,6 +943,23 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+ 	client->link->ready = false;
+ 	client->link->idle_tx = false;
+ 
++  if (!cf_disable_prepared_statement_support && ps_name) {
++    switch (pkt->type)
++    {
++      case 'P':
++        if (!handle_parse_command(client, pkt, ps_name))
++          return false;
++        free((char *)ps_name);
++        return true;
++
++      case 'B':
++        if (!handle_bind_command(client, pkt, ps_name))
++          return false;
++        free((char *)ps_name);
++        return true;
++    }
++  }
++
+ 	/* forward the packet */
+ 	sbuf_prepare_send(sbuf, &client->link->sbuf, pkt->len);
+ 

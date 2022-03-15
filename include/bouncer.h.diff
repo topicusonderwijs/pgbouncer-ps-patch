@@ -1,0 +1,66 @@
+diff --git a/include/bouncer.h b/include/bouncer.h
+index 56fa5f5..bd925e9 100644
+--- a/include/bouncer.h
++++ b/include/bouncer.h
+@@ -100,6 +100,7 @@ typedef union PgAddr PgAddr;
+ typedef enum SocketState SocketState;
+ typedef struct PktHdr PktHdr;
+ typedef struct ScramState ScramState;
++typedef struct PgPreparedStatement PgPreparedStatement;
+ 
+ extern int cf_sbuf_len;
+ 
+@@ -122,6 +123,8 @@ extern int cf_sbuf_len;
+ #include "janitor.h"
+ #include "hba.h"
+ #include "pam.h"
++#include "messages.h"
++#include "ps.h"
+ 
+ #ifndef WIN32
+ #define DEFAULT_UNIX_SOCKET_DIR "/tmp"
+@@ -233,6 +236,10 @@ struct PgStats {
+ 	usec_t xact_time;	/* total transaction time in us */
+ 	usec_t query_time;	/* total query time in us */
+ 	usec_t wait_time;	/* total time clients had to wait */
++
++  uint64_t ps_server_parse_count;
++  uint64_t ps_client_parse_count;
++  uint64_t ps_bind_count;
+ };
+ 
+ /*
+@@ -359,6 +366,10 @@ struct PgDatabase {
+ 	struct AATree user_tree;	/* users that have been queried on this database */
+ };
+ 
++struct OutstandingParsePacket {
++	struct List node;
++	bool ignore:1;
++};
+ 
+ /*
+  * A client or server connection.
+@@ -432,6 +443,12 @@ struct PgSocket {
+ 
+ 	VarCache vars;		/* state of interesting server parameters */
+ 
++  PgParsedPreparedStatement *prepared_statements;
++
++  uint64_t nextUniquePreparedStatementID;
++  PgServerPreparedStatement *server_prepared_statements;
++  struct List server_outstanding_parse_packets;
++
+ 	SBuf sbuf;		/* stream buffer, must be last */
+ };
+ 
+@@ -545,6 +562,9 @@ extern char *cf_server_tls_cert_file;
+ extern char *cf_server_tls_key_file;
+ extern char *cf_server_tls_ciphers;
+ 
++extern int cf_disable_prepared_statement_support;
++extern int cf_prepared_statement_cache_queries;
++
+ extern const struct CfLookup pool_mode_map[];
+ 
+ extern usec_t g_suspend_start;
