@@ -56,3 +56,8 @@ Example - JDBC driver
 jdbc:postgresql://pgbouncer-ps:6432/postgres?prepareThreshold=10&preparedStatementCacheQueries=512&preparedStatementCacheSizeMiB=10
 ```
 Note: Cached prepared statements by the JDBC driver will increase the memory footprint of each JDBC connection in your application and each frontend connection in PgBouncer.
+
+# Running tests
+```
+./gradlew cleanTest test -info
+```
