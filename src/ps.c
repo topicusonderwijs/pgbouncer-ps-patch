@@ -106,7 +106,7 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
   if (link_ps) {
     /* Statement already prepared on this link, do not forward packet */
-    slog_noise(client, "handle_parse_command: mapping statement '%s' to '%s' (query hash '%ld%ld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
+    slog_debug(client, "handle_parse_command: mapping statement '%s' to '%s' (query hash '%ld%ld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
 
     if (!pktbuf_send_immediate(create_parse_complete_packet(), client))
       return false;
@@ -117,7 +117,7 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
     /* Statement not prepared on this link, sent modified P packet */
     link_ps = create_server_prepared_statement(client, ps);
 
-    slog_noise(client, "handle_parse_command: creating mapping for statement '%s' to '%s' (query hash '%ld%ld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
+    slog_debug(client, "handle_parse_command: creating mapping for statement '%s' to '%s' (query hash '%ld%ld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
 
     buf = create_parse_packet(link_ps->name, ps->pkt);
 
@@ -172,7 +172,7 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
     /* Statement is not prepared on this link, sent P packet first */
     link_ps = create_server_prepared_statement(client, ps);
     
-    slog_noise(server, "handle_bind_command: prepared statement '%s' (query hash '%ld%ld') not available on server, preparing '%s' before bind", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
+    slog_debug(server, "handle_bind_command: prepared statement '%s' (query hash '%ld%ld') not available on server, preparing '%s' before bind", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
 
     buf = create_parse_packet(link_ps->name, ps->pkt);
 
@@ -190,7 +190,7 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
     register_prepared_statement(server, link_ps);
   }
 
-  slog_noise(client, "handle_bind_command: mapped statement '%s' (query hash '%ld%ld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
+  slog_debug(client, "handle_bind_command: mapped statement '%s' (query hash '%ld%ld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
 
   if (!copy_bind_packet(client, &buf, link_ps->name, pkt))
     return false;
@@ -202,6 +202,35 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
   /* update stats */
   link_ps->bind_count++;
+
+  return true;
+}
+
+bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket *close_packet)
+{
+  SBuf *sbuf = &client->sbuf;
+  PgParsedPreparedStatement *ps = NULL;
+  PktBuf *buf;
+
+  HASH_FIND_STR(client->prepared_statements, close_packet->name, ps);
+  if (ps) {
+    slog_noise(client, "handle_close_command: removed '%s' from cached prepared statements, items remaining %u", close_packet->name, HASH_COUNT(client->prepared_statements));
+    HASH_DELETE(hh, client->prepared_statements, ps);
+    parse_packet_free(ps->pkt);
+    free(ps);
+
+    /* Do not forward packet to server */
+    sbuf_prepare_skip(sbuf, pkt->len);
+    if (!sbuf_flush(sbuf))
+      return false;
+    
+    buf = create_close_complete_packet();
+
+    if (!pktbuf_send_immediate(buf, client))
+      return false;
+
+    pktbuf_free(buf);
+  }
 
   return true;
 }

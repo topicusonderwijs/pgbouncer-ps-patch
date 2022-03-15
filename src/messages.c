@@ -8,8 +8,6 @@ bool inspect_parse_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
   if (incomplete_pkt(pkt))
     return false;
 
-  slog_noise(client, "inspect_parse_packet: type=%c, len=%d", pkt->type, pkt->len);
-
   mbuf_rewind_reader(&pkt->data);
 
   /* Start at 5, because we skip the 'P' and the 4 bytes which are the length of the message */
@@ -19,10 +17,13 @@ bool inspect_parse_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
   if (!mbuf_get_string(&pkt->data, &statement))
     goto failed;
 
-  if (strlen(statement) > 0)
+  if (strlen(statement) > 0) {
     *dst_p = strdup(statement);
-  else
+    slog_noise(client, "inspect_parse_packet: type=%c, len=%d, statement=%s", pkt->type, pkt->len, statement);
+  } else {
     *dst_p = NULL;
+    slog_noise(client, "inspect_parse_packet: type=%c, len=%d, statement=<empty>", pkt->type, pkt->len);
+  }
 
   mbuf_rewind_reader(&pkt->data);
   
@@ -54,17 +55,16 @@ bool inspect_bind_packet(PgSocket *client, PktHdr *pkt, const char **dst_p)
   if (!mbuf_get_string(&pkt->data, &statement))
     goto failed;
 
-  if (strlen(statement) > 0)
+  if (strlen(statement) > 0) {
+    slog_noise(client, "inspect_bind_packet: type=%c, len=%d, statement=%s", pkt->type, pkt->len, statement);
     *dst_p = strdup(statement);
-  else
+  } else {
     *dst_p = NULL;
+    slog_noise(client, "inspect_bind_packet: type=%c, len=%d, statement=<empty>", pkt->type, pkt->len);
+  }
 
   mbuf_rewind_reader(&pkt->data);
   
-  // free(ptr);
-  // free(portal);
-  // free(statement);
-
   return true;
 
 	failed:
@@ -110,11 +110,6 @@ bool unmarshall_parse_packet(PgSocket *client, PktHdr *pkt, PgParsePacket **pars
   (*parse_packet_p)->parameter_types_bytes = (uint8_t *)malloc(4 * num_parameters);
   memcpy((*parse_packet_p)->parameter_types_bytes, parameter_types_bytes, num_parameters * 4);
 
-  // free((uint8_t *)ptr);
-  // free((char *)statement);
-  // free((char *)query);
-  // free((uint8_t *)parameter_types_bytes);
-
   return true;
 
 	failed:
@@ -146,11 +141,18 @@ bool unmarshall_close_packet(PgSocket *client, PktHdr *pkt, PgClosePacket **clos
   (*close_packet_p)->type = type;
   (*close_packet_p)->name = strdup(name);
 
+  slog_noise(client, "unmarshall_close_packet: type=%c, len=%d, S/P=%c, name=%s", pkt->type, pkt->len, type, name);
+
   return true;
 
 	failed:
-    disconnect_client(client, true, "broken Bind packet");
+    disconnect_client(client, true, "broken Close packet");
 	  return false;
+}
+
+bool is_close_statement_packet(PgClosePacket *close_packet)
+{
+  return close_packet->type == 'S' && strlen(close_packet->name) > 0;
 }
 
 PktBuf *create_parse_packet(char *statement, PgParsePacket *pkt)
@@ -182,6 +184,15 @@ PktBuf *create_close_packet(char *statement)
   pktbuf_start_packet(buf, 'C');
   pktbuf_put_char(buf, 'S');
   pktbuf_put_string(buf, statement);
+  pktbuf_finish_packet(buf);
+  return buf;
+}
+
+PktBuf *create_close_complete_packet(void)
+{
+  PktBuf *buf;
+  buf = pktbuf_dynamic(5);
+  pktbuf_start_packet(buf, '3');
   pktbuf_finish_packet(buf);
   return buf;
 }
