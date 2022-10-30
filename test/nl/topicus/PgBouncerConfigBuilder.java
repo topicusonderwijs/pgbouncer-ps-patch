@@ -43,7 +43,7 @@ public class PgBouncerConfigBuilder {
     pgbouncer.add("listen_addr", "*");
     pgbouncer.add("listen_port", "6432");
     pgbouncer.add("auth_type", "md5");
-    pgbouncer.add("auth_file", "/etc/userlist.txt");
+    pgbouncer.add("auth_file", "/etc/pgbouncer/userlist.txt");
     pgbouncer.add("ignore_startup_parameters", "extra_float_digits");
     pgbouncer.add("pool_mode", "transaction");
     pgbouncer.add("disable_prepared_statement_support", "0");

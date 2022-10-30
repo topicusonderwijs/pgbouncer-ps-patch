@@ -18,10 +18,10 @@ Download and install pgbouncer-ps by running the following commands (RHEL/CentOS
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
-# download the latest tested pgbouncer distribution - 1.14
-git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_14_0"
+# download the latest tested pgbouncer distribution - 1.17
+git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_17_0"
 
-# download pgbouncer-ps extensions - tag v1.14.0+1
+# download pgbouncer-ps extensions - tag v1.17.0+1
 git clone git@github.com:topicus-education-ops/pgbouncer-ps-patch.git
 
 # merge pgbouncer-ps extensions into pgbouncer code

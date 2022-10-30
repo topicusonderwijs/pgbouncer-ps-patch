@@ -52,8 +52,8 @@ if [ $patchstatus -eq 1 ]; then
    echo "Possible causes: "
    echo "   pgbouncer-ps-patch already installed in target directory?"
    echo "   new version of pgbouncer with changed source files that can't be patched?"
-   echo "      - last tested with pgbouncer v1.14 (June 2020)"
-   echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"pgbouncer_1_14_0\""
+   echo "      - last tested with pgbouncer v1.17.0 (Mar 2022)"
+   echo "      - Try getting pgbouncer with: git clone https://github.com/pgbouncer/pgbouncer.git --branch \"pgbouncer_1_17_0\""
    echo "Status: pgbouncer-ps-patch merge FAILED"
 else
    echo "Status: pgbouncer-ps-patch merge SUCEEDED"

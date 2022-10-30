@@ -20,6 +20,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
+import org.testcontainers.utility.MountableFile;
 
 abstract class AbstractPgBouncerTest {
   static {
@@ -41,7 +42,7 @@ abstract class AbstractPgBouncerTest {
 
     Network network = Network.newNetwork();
 
-    postgres = new PostgreSQLContainer<>("postgres:12")
+    postgres = new PostgreSQLContainer<>("postgres:15")
       .withNetwork(network)
       .withNetworkAliases(POSTGRESQL_NETWORK_ALIAS);
     postgres.start();
@@ -56,10 +57,10 @@ abstract class AbstractPgBouncerTest {
     File userlist = createUserlist();
 
     pgbouncer = new GenericContainer<>(pgbouncerImg).withExposedPorts(6432)
-      .withFileSystemBind(pgbouncerIni.getAbsolutePath(), "/etc/pgbouncer.ini", BindMode.READ_ONLY)
-      .withFileSystemBind(userlist.getAbsolutePath(), "/etc/userlist.txt", BindMode.READ_ONLY)
+      .withCopyFileToContainer(MountableFile.forHostPath(pgbouncerIni.getAbsolutePath()), "/etc/pgbouncer/pgbouncer.ini")
+      .withCopyFileToContainer(MountableFile.forHostPath(userlist.getAbsolutePath()), "/etc/pgbouncer/userlist.txt")
       .withNetwork(network)
-      .withCommand("pgbouncer", "/etc/pgbouncer.ini");
+      .withCommand("pgbouncer", "/etc/pgbouncer/pgbouncer.ini");
    }
     
   @AfterAll
@@ -72,6 +73,7 @@ abstract class AbstractPgBouncerTest {
     
   @BeforeEach
   void startPgBouncer() {
+    
     pgbouncer.start();
   }
 

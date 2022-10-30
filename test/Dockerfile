@@ -4,7 +4,7 @@ RUN yum -y install libevent-devel openssl-devel python-devel libtool git patch m
 
 WORKDIR /usr/src
 
-RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_14_0"
+RUN git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_17_0"
 
 COPY . install-pgbouncer-ps-patch.sh pgbouncer-ps/
 
@@ -15,7 +15,7 @@ RUN \
   && git submodule init \
   && git submodule update \
   && ./autogen.sh \
-  && ./configure ... \
+  && ./configure --build=x86_64-linux-gnu --host=aarch64-linux-gnu ... \
   && make -W doc/pgbouncer.1 -W doc/pgbouncer.5 \
   && cp pgbouncer /usr/local/bin/
 
