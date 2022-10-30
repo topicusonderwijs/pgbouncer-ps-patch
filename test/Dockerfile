@@ -15,7 +15,8 @@ RUN \
   && git submodule init \
   && git submodule update \
   && ./autogen.sh \
-  && ./configure --build=x86_64-linux-gnu --host=aarch64-linux-gnu ... \
+  && if [ "x$(uname -m)" = "xaarch64" ]; then args="--build=x86_64-linux-gnu --host=aarch64-linux-gnu" ;fi\
+  && ./configure ${args} ... \
   && make -W doc/pgbouncer.1 -W doc/pgbouncer.5 \
   && cp pgbouncer /usr/local/bin/
 
