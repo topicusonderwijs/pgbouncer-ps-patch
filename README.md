@@ -33,7 +33,7 @@ cd ../pgbouncer
 git submodule init
 git submodule update
 ./autogen.sh
-./configure ...
+./configure
 make
 sudo make install
 ```
