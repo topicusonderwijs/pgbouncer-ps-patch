@@ -193,7 +193,7 @@ bool unmarshall_close_packet(PgSocket *client, PktHdr *pkt, PgClosePacket **clos
   if (!mbuf_get_string(&pkt->data, &name))
     name = "";
 
-  *close_packet_p = (PgClosePacket *)malloc(sizeof(*close_packet_p));
+  *close_packet_p = (PgClosePacket *)malloc(sizeof(PgClosePacket));
   (*close_packet_p)->type = type;
   (*close_packet_p)->name = strdup(name);
 
