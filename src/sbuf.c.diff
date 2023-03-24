@@ -1,16 +1,16 @@
 diff --git a/src/sbuf.c b/src/sbuf.c
-index 137170c..bce441c 100644
+index 088bc06..885e7ee 100644
 --- a/src/sbuf.c
 +++ b/src/sbuf.c
-@@ -498,6 +498,13 @@ static bool sbuf_queue_send(SBuf *sbuf)
+@@ -501,6 +501,13 @@ static bool sbuf_queue_send(SBuf *sbuf)
  	return true;
  }
  
 +bool sbuf_flush(SBuf *sbuf) {
-+  if (sbuf->io) {
-+    return sbuf_send_pending(sbuf);
-+  }
-+  return true;
++	if (sbuf->io) {
++		return sbuf_send_pending(sbuf);
++	}
++	return true;
 +}
 +
  /*

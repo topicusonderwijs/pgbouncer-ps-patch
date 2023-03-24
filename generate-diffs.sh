@@ -38,7 +38,7 @@ do
   if [ "$dir" != "." ]; then
     mkdir -p $DST_DIR/$dir
   fi
-  git diff tags/pgbouncer_1_14_0 $file > ${DST_DIR}/$file.diff
+  git diff tags/pgbouncer_1_18_0 $file > ${DST_DIR}/$file.diff
 done
 
 echo -n "Copying files: "

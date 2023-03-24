@@ -1,8 +1,8 @@
 diff --git a/src/server.c b/src/server.c
-index d0c24e1..5b6dc92 100644
+index 58acbdc..db9212e 100644
 --- a/src/server.c
 +++ b/src/server.c
-@@ -252,6 +252,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -250,6 +250,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	SBuf *sbuf = &server->sbuf;
  	PgSocket *client = server->link;
  	bool async_response = false;
@@ -12,7 +12,7 @@ index d0c24e1..5b6dc92 100644
  
  	Assert(!server->pool->db->admin);
  
-@@ -348,13 +351,25 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -346,13 +349,25 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  		break;
  	/* chat packets */
  	case '2':		/* BindComplete */
@@ -38,7 +38,7 @@ index d0c24e1..5b6dc92 100644
  	case 's':		/* PortalSuspended */
  
  	/* data packets, there will be more coming */
-@@ -374,6 +389,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -372,6 +387,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	} else if (client) {
  		if (client->state == CL_LOGIN) {
  			return handle_auth_query_response(client, pkt);

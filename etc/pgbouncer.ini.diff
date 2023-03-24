@@ -1,5 +1,5 @@
 diff --git a/etc/pgbouncer.ini b/etc/pgbouncer.ini
-index 84d2f98..2ba9809 100644
+index 4aadcb1..4ac5b5c 100644
 --- a/etc/pgbouncer.ini
 +++ b/etc/pgbouncer.ini
 @@ -355,5 +355,12 @@ auth_file = /etc/pgbouncer/userlist.txt

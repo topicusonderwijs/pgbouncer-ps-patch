@@ -1,8 +1,8 @@
 diff --git a/src/main.c b/src/main.c
-index b0dcb58..09aee93 100644
+index fb76a56..b499cb1 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -170,6 +170,9 @@ char *cf_server_tls_cert_file;
+@@ -184,6 +184,9 @@ char *cf_server_tls_cert_file;
  char *cf_server_tls_key_file;
  char *cf_server_tls_ciphers;
  
@@ -12,9 +12,9 @@ index b0dcb58..09aee93 100644
  /*
   * config file description
   */
-@@ -306,6 +309,9 @@ CF_ABS("server_tls_key_file", CF_STR, cf_server_tls_key_file, CF_NO_RELOAD, ""),
- CF_ABS("server_tls_protocols", CF_STR, cf_server_tls_protocols, CF_NO_RELOAD, "secure"),
- CF_ABS("server_tls_ciphers", CF_STR, cf_server_tls_ciphers, CF_NO_RELOAD, "fast"),
+@@ -318,6 +321,9 @@ CF_ABS("user", CF_STR, cf_username, CF_NO_RELOAD, NULL),
+ #endif
+ CF_ABS("verbose", CF_INT, cf_verbose, 0, NULL),
  
 +CF_ABS("disable_prepared_statement_support", CF_INT, cf_disable_prepared_statement_support, 0, "1"),
 +CF_ABS("prepared_statement_cache_queries", CF_INT, cf_prepared_statement_cache_queries, 0, "100"),

@@ -1,8 +1,8 @@
 diff --git a/include/bouncer.h b/include/bouncer.h
-index 4701aec..7207359 100644
+index 42b5bf2..edeb769 100644
 --- a/include/bouncer.h
 +++ b/include/bouncer.h
-@@ -101,6 +101,7 @@ typedef union PgAddr PgAddr;
+@@ -96,6 +96,7 @@ typedef union PgAddr PgAddr;
  typedef enum SocketState SocketState;
  typedef struct PktHdr PktHdr;
  typedef struct ScramState ScramState;
@@ -10,7 +10,7 @@ index 4701aec..7207359 100644
  
  extern int cf_sbuf_len;
  
-@@ -123,6 +124,8 @@ extern int cf_sbuf_len;
+@@ -118,6 +119,8 @@ extern int cf_sbuf_len;
  #include "janitor.h"
  #include "hba.h"
  #include "pam.h"
@@ -19,18 +19,18 @@ index 4701aec..7207359 100644
  
  #ifndef WIN32
  #define DEFAULT_UNIX_SOCKET_DIR "/tmp"
-@@ -234,6 +237,10 @@ struct PgStats {
+@@ -245,6 +248,10 @@ struct PgStats {
  	usec_t xact_time;	/* total transaction time in us */
  	usec_t query_time;	/* total query time in us */
  	usec_t wait_time;	/* total time clients had to wait */
 +
-+  uint64_t ps_server_parse_count;
-+  uint64_t ps_client_parse_count;
-+  uint64_t ps_bind_count;
++	uint64_t ps_server_parse_count;
++	uint64_t ps_client_parse_count;
++	uint64_t ps_bind_count;
  };
  
  /*
-@@ -360,6 +367,10 @@ struct PgDatabase {
+@@ -474,6 +481,10 @@ struct PgDatabase {
  	struct AATree user_tree;	/* users that have been queried on this database */
  };
  
@@ -41,20 +41,20 @@ index 4701aec..7207359 100644
  
  /*
   * A client or server connection.
-@@ -433,6 +444,12 @@ struct PgSocket {
+@@ -551,6 +562,12 @@ struct PgSocket {
  
  	VarCache vars;		/* state of interesting server parameters */
  
-+  PgParsedPreparedStatement *prepared_statements;
++	PgParsedPreparedStatement *prepared_statements;
 +
-+  uint64_t nextUniquePreparedStatementID;
-+  PgServerPreparedStatement *server_prepared_statements;
-+  struct List server_outstanding_parse_packets;
++	uint64_t nextUniquePreparedStatementID;
++	PgServerPreparedStatement *server_prepared_statements;
++	struct List server_outstanding_parse_packets;
 +
  	SBuf sbuf;		/* stream buffer, must be last */
  };
  
-@@ -546,6 +563,9 @@ extern char *cf_server_tls_cert_file;
+@@ -664,6 +681,9 @@ extern char *cf_server_tls_cert_file;
  extern char *cf_server_tls_key_file;
  extern char *cf_server_tls_ciphers;
  

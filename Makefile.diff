@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index 9884dd8..d0f7aff 100644
+index 79476b5..49d4e51 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -10,12 +10,14 @@ pgbouncer_SOURCES = \

@@ -1,15 +1,15 @@
 typedef struct PgParsePacket
 {
-  char *name;
-  char *query;
-  uint16_t num_parameters;
-  uint8_t *parameter_types_bytes;
+	char *name;
+	char *query;
+	uint16_t num_parameters;
+	uint8_t *parameter_types_bytes;
 } PgParsePacket;
 
 typedef struct PgClosePacket
 {
 	char type;
-  char* name;
+	char* name;
 } PgClosePacket;
 
 bool inspect_parse_packet(PgSocket *client, PktHdr *pkt, const char **dst_p);
