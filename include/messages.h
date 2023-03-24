@@ -30,3 +30,5 @@ PktBuf *create_close_complete_packet(void);
 bool copy_bind_packet(PgSocket *client, PktBuf **buf_p, char *remapped_statement, PktHdr *pkt);
 
 void parse_packet_free(PgParsePacket *pkt);
+
+uint64_t sizeof_parse_packet(PgParsePacket *pkt);

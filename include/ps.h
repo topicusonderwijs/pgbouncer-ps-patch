@@ -23,3 +23,6 @@ bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket
 
 void ps_client_free(PgSocket *client);
 void ps_server_free(PgSocket *server);
+
+uint64_t sizeof_client_ps_cache(PgSocket *client);
+uint64_t sizeof_server_ps_cache(PgSocket *server);

@@ -359,3 +359,8 @@ void parse_packet_free(PgParsePacket *pkt)
 	free(pkt->parameter_types_bytes);
 	free(pkt);
 }
+
+uint64_t sizeof_parse_packet(PgParsePacket *pkt)
+{
+	return strlen(pkt->name) + strlen(pkt->query) + sizeof(uint16_t) + (pkt->num_parameters * sizeof(uint8_t));
+}

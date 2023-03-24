@@ -97,6 +97,7 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		return false;
 
 	/* update stats */
+	client->ps_parses++;
 	client->pool->stats.ps_client_parse_count++;
 
 	ps = create_prepared_statement(pp);
@@ -132,6 +133,7 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		buf = create_parse_packet(link_ps->name, ps->pkt);
 
 		/* update stats */
+		server->ps_parses++;
 		client->pool->stats.ps_server_parse_count++;
 
 		/* Track Parse command sent to server */
@@ -190,6 +192,7 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		buf = create_parse_packet(link_ps->name, ps->pkt);
 
 		/* update stats */
+		server->ps_parses++;
 		client->pool->stats.ps_server_parse_count++;
 
 		/* Track Parse command sent to server */
@@ -223,6 +226,8 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 	pktbuf_free(buf);
 
 	/* update stats */
+	client->ps_binds++;
+	server->ps_binds++;
 	link_ps->bind_count++;
 
 	return true;
@@ -328,4 +333,28 @@ void ps_server_free(PgSocket *server)
 		free(opp);
 	}
 	free(server->server_prepared_statements);
+}
+
+uint64_t sizeof_client_ps_cache(PgSocket *client)
+{
+	uint64_t size = 0;
+
+	struct PgParsedPreparedStatement *s;
+	for (s = client->prepared_statements; s != NULL; s = s->hh.next) {
+		size += strlen(s->name) + (2 * sizeof(uint64_t)) + sizeof_parse_packet(s->pkt);
+	}
+
+	return size;
+}
+
+uint64_t sizeof_server_ps_cache(PgSocket *server)
+{
+	uint64_t size = 0;
+
+	struct PgServerPreparedStatement *s;
+	for (s = server->server_prepared_statements; s != NULL; s = s->hh.next) {
+		size += (2 * sizeof(uint64_t)) + strlen(s->name) + sizeof(uint64_t);
+	}
+
+	return size;
 }
