@@ -11,15 +11,14 @@ DST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 MERGEFILES="\
   Makefile\
   etc/pgbouncer.ini\
-  include/bouncer.h\
-  include/sbuf.h\
-  src/admin.c\
   src/client.c\
   src/main.c\
   src/objects.c\
   src/sbuf.c\
   src/server.c\
   src/stats.c\
+  include/bouncer.h\
+  include/sbuf.h\
   "
 
 NEWFILES="\
