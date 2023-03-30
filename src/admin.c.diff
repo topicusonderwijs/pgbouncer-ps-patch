@@ -1,0 +1,127 @@
+diff --git a/src/admin.c b/src/admin.c
+index 10b2a0b..9e31fd3 100644
+--- a/src/admin.c
++++ b/src/admin.c
+@@ -808,6 +808,106 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
+ 	return true;
+ }
+ 
++#define PSF_STD "ssssTTiiiii"
++
++static void socket_ps_header(PktBuf *buf)
++{
++	pktbuf_write_RowDescription(buf, PSF_STD,
++				"type", "user", "database", "state",
++				"connect_time", "request_time",
++				"entries", "size",
++				"parses", "binds", "outstanding");
++}
++
++static void socket_ps_row(PktBuf *buf, PgSocket *sk, const char *state)
++{
++	int foo = 0;
++	if (is_server_socket(sk)) {
++		struct List *el, *tmp_l;
++		list_for_each_safe(el, &sk->server_outstanding_parse_packets, tmp_l) {
++			foo++;
++		}
++	}
++
++	pktbuf_write_DataRow(buf, PSF_STD,
++			     is_server_socket(sk) ? "S" :"C",
++			     sk->login_user ? sk->login_user->name : "(nouser)",
++			     sk->pool ? sk->pool->db->name : "(nodb)",
++			     state,
++			     sk->connect_time,
++			     sk->request_time,
++			     cf_disable_prepared_statement_support ? 0 : is_server_socket(sk) ? HASH_COUNT(sk->server_prepared_statements) : HASH_COUNT(sk->prepared_statements),
++			     cf_disable_prepared_statement_support ? 0 : is_server_socket(sk) ? sizeof_server_ps_cache(sk) : sizeof_client_ps_cache(sk),
++				 sk->ps_binds,
++				 sk->ps_parses,
++				 foo);
++}
++
++/* Helper for SHOW CLIENT_PS/SERVER_PS */
++static void show_ps_socket_list(PktBuf *buf, struct StatList *list, const char *state)
++{
++	struct List *item;
++	PgSocket *sk;
++
++	statlist_for_each(item, list) {
++		sk = container_of(item, PgSocket, head);
++		socket_ps_row(buf, sk, state);
++	}
++}
++
++/* Command: SHOW CLIENT PS */
++static bool admin_show_client_ps(PgSocket *admin, const char *arg)
++{
++	struct List *item;
++	PgPool *pool;
++	PktBuf *buf = pktbuf_dynamic(256);
++
++	if (!buf) {
++		admin_error(admin, "no mem");
++		return true;
++	}
++
++	socket_ps_header(buf);
++	statlist_for_each(item, &pool_list) {
++		pool = container_of(item, PgPool, head);
++		show_ps_socket_list(buf, &pool->active_client_list, "active");
++		show_ps_socket_list(buf, &pool->waiting_client_list, "waiting");
++		show_ps_socket_list(buf, &pool->active_cancel_req_list, "active_cancel_req");
++		show_ps_socket_list(buf, &pool->waiting_cancel_req_list, "waiting_cancel_req");
++	}
++
++	admin_flush(admin, buf, "SHOW");
++	return true;
++}
++
++/* Command: SHOW SERVER PS */
++static bool admin_show_server_ps(PgSocket *admin, const char *arg)
++{
++	struct List *item;
++	PgPool *pool;
++	PktBuf *buf = pktbuf_dynamic(256);
++
++	if (!buf) {
++		admin_error(admin, "no mem");
++		return true;
++	}
++
++	socket_ps_header(buf);
++	statlist_for_each(item, &pool_list) {
++		pool = container_of(item, PgPool, head);
++		show_ps_socket_list(buf, &pool->active_server_list, "active");
++		show_ps_socket_list(buf, &pool->idle_server_list, "idle");
++		show_ps_socket_list(buf, &pool->used_server_list, "used");
++		show_ps_socket_list(buf, &pool->tested_server_list, "tested");
++		show_ps_socket_list(buf, &pool->new_server_list, "new");
++		show_ps_socket_list(buf, &pool->active_cancel_server_list, "active_cancel");
++		show_ps_socket_list(buf, &pool->being_canceled_server_list, "being_canceled");
++	}
++
++	admin_flush(admin, buf, "SHOW");
++	return true;
++}
++
+ /* Command: SHOW POOLS */
+ static bool admin_show_pools(PgSocket *admin, const char *arg)
+ {
+@@ -1379,6 +1479,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
+ 
+ static struct cmd_lookup show_map [] = {
+ 	{"clients", admin_show_clients},
++	{"client_ps", admin_show_client_ps},
+ 	{"config", admin_show_config},
+ 	{"databases", admin_show_databases},
+ 	{"fds", admin_show_fds},
+@@ -1386,6 +1487,7 @@ static struct cmd_lookup show_map [] = {
+ 	{"lists", admin_show_lists},
+ 	{"pools", admin_show_pools},
+ 	{"servers", admin_show_servers},
++	{"server_ps", admin_show_server_ps},
+ 	{"sockets", admin_show_sockets},
+ 	{"active_sockets", admin_show_active_sockets},
+ 	{"stats", admin_show_stats},
