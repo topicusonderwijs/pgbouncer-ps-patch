@@ -2,22 +2,29 @@ plugins {
     id 'java'
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
 repositories {
     mavenCentral()
 }
 
-def junitJupiterVersion = '5.9.1'
+def junitJupiterVersion = '5.9.2'
+def testContainerVersion = '1.17.6'
 
 dependencies {
   testCompileOnly "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
   testCompileOnly "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"
-  testCompileOnly "org.testcontainers:testcontainers:1.17.5"
-  testCompileOnly "org.testcontainers:junit-jupiter:1.17.5"
+  testCompileOnly "org.testcontainers:testcontainers:$testContainerVersion"
+  testCompileOnly "org.testcontainers:junit-jupiter:$testContainerVersion"
 
   testImplementation "org.slf4j:slf4j-simple:1.7.30"
   testImplementation "org.ini4j:ini4j:0.5.4"
-  testImplementation "org.postgresql:postgresql:42.5.0"
-  testImplementation "org.testcontainers:postgresql:1.17.5"
+  testImplementation "org.postgresql:postgresql:42.6.0"
+  testImplementation "org.testcontainers:postgresql:$testContainerVersion"
   testImplementation "io.r2dbc:r2dbc-postgresql:0.8.5.RELEASE"
   
   testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion"
@@ -32,7 +39,7 @@ sourceSets {
 
     test {
         java {
-            srcDirs = ['test']
+            srcDirs = ['test/java']
         }
     }
 }
