@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+	id("io.quarkus") version "2.16.6.Final"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+def quarkusVersion = '2.13.7.Final'
+def junitJupiterVersion = '5.9.2'
+def testContainerVersion = '1.17.6'
+
+dependencies {
+  implementation "io.quarkus.arc:arc:$quarkusVersion"
+  implementation "io.quarkus:quarkus-agroal:$quarkusVersion"
+  implementation "io.quarkus:quarkus-hibernate-orm:$quarkusVersion"
+  implementation "io.quarkus:quarkus-jdbc-postgresql:$quarkusVersion"
+
+//   testCompileOnly "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
+//   testCompileOnly "org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion"
+  testCompileOnly "org.testcontainers:testcontainers:$testContainerVersion"
+//   testCompileOnly "org.testcontainers:junit-jupiter:$testContainerVersion"
+
+  testImplementation "org.slf4j:slf4j-simple:1.7.30"
+  testImplementation "org.ini4j:ini4j:0.5.4"
+  testImplementation "org.postgresql:postgresql:42.6.0"
+  testImplementation "org.testcontainers:postgresql:$testContainerVersion"
+  testImplementation "io.r2dbc:r2dbc-postgresql:0.8.5.RELEASE"
+  testImplementation "io.quarkus:quarkus-junit5:$quarkusVersion"
+
+//   testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion"
+}
+
+test {
+  useJUnitPlatform()
+
+  maxHeapSize = '1G'
+
+  systemProperty "platform.quarkus.native.builder-image", false
+  systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}

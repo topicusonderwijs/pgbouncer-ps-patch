@@ -1,4 +1,4 @@
-package nl.topicus;
+package nl.topicus.integrations.pgbouncer.jdbc;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -21,6 +21,8 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.MountableFile;
+
+import nl.topicus.integrations.pgbouncer.*;
 
 abstract class AbstractPgBouncerTest {
   static {

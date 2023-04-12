@@ -1,4 +1,4 @@
-package nl.topicus;
+package nl.topicus.integrations.pgbouncer.jdbc;
 
 import static org.junit.jupiter.api.Assertions.*;
 

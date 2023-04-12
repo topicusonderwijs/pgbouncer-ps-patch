@@ -1,0 +1,16 @@
+[package]
+name = "tokyo-test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+testcontainers = { version = "0.14.0" }
+tokio = { version = "1.21.2", features = ["full"] }
+tokio-postgres = { version = "0.7.7" }
+log = "0.4.0"
+env_logger = "0.9.0"
+
+[dev-dependencies]
+pretty_env_logger = "0.4"

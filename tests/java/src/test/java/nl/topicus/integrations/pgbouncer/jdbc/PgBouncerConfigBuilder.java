@@ -1,4 +1,4 @@
-package nl.topicus;
+package nl.topicus.integrations.pgbouncer;
 
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
@@ -7,7 +7,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public class PgBouncerConfigBuilder {
   private String databaseName;
 
-  private String postgresHost = AbstractPgBouncerTest.POSTGRESQL_NETWORK_ALIAS;
+  private String postgresHost = "pg";
 
   private Integer postgresPort = PostgreSQLContainer.POSTGRESQL_PORT;
 
