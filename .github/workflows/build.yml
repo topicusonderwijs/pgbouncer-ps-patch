@@ -51,6 +51,7 @@ jobs:
                 ./autogen.sh
                 ./configure
                 make
+                ./pgbouncer --version
                 cd ..
                 tar -czvf pgbouncer-ps-1.18.0.el7.x86_64.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
 
@@ -67,6 +68,7 @@ jobs:
                 ./autogen.sh
                 ./configure
                 make
+                ./pgbouncer --version
                 cd ..
                 tar -czvf pgbouncer-ps-1.18.0.el8.x86_64.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
 
