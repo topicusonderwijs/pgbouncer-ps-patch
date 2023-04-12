@@ -33,7 +33,8 @@ jobs:
             image: centos:7
             options: -v ${{ github.workspace }}:/src
             run: |
-                yum -y install libevent-devel openssl-devel python-devel libtool git patch make
+                yum -y install epel-release
+                yum -y install libevent-devel openssl-devel python-devel libtool git patch make pandoc
                 cd /src/pgbouncer-ps
                 ./install-pgbouncer-ps-patch.sh ../pgbouncer
                 cd ../pgbouncer
