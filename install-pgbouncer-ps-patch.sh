@@ -13,15 +13,18 @@ patchstatus=0
 # Patch each modified file
 MERGEFILES="\
   Makefile\
+  configure.ac\
   etc/pgbouncer.ini\
+  include/bouncer.h\
+  include/objects.h\
+  include/sbuf.h\
+  src/admin.c\
   src/client.c\
   src/main.c\
   src/objects.c\
   src/sbuf.c\
   src/server.c\
   src/stats.c\
-  include/bouncer.h\
-  include/sbuf.h\
   "
 for file in $MERGEFILES
 do
@@ -30,7 +33,6 @@ do
 done
 
 # copy pgbouncer-ps source files
-mkdir -p $PGDIR/images
 NEWFILES="\
   include/messages.h\
   include/ps.h\

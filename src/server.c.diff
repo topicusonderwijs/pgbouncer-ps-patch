@@ -1,5 +1,5 @@
 diff --git a/src/server.c b/src/server.c
-index 58acbdc..db9212e 100644
+index 58acbdc..7843961 100644
 --- a/src/server.c
 +++ b/src/server.c
 @@ -250,6 +250,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
@@ -28,7 +28,7 @@ index 58acbdc..db9212e 100644
  	case 'n':		/* NoData */
 +		break;
  	case '1':		/* ParseComplete */
-+		oppl = list_pop(&server->server_outstanding_parse_packets);
++		oppl = list_pop(&server->ps_state.server_outstanding_parse_packets);
 +		if (oppl) {
 +			opp = container_of(oppl, struct OutstandingParsePacket, node);
 +			ignore_packet = opp->ignore;

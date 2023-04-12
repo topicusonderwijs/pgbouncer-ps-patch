@@ -1,31 +1,37 @@
 diff --git a/src/admin.c b/src/admin.c
-index 10b2a0b..9e31fd3 100644
+index 10b2a0b..caa929e 100644
 --- a/src/admin.c
 +++ b/src/admin.c
-@@ -808,6 +808,106 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
+@@ -588,8 +588,8 @@ static bool admin_show_users(PgSocket *admin, const char *arg)
  	return true;
  }
  
-+#define PSF_STD "ssssTTiiiii"
+-#define SKF_STD "sssssisiTTiiississ"
+-#define SKF_DBG "sssssisiTTiiississiiiiiii"
++#define SKF_STD "sssssisiTTiiississii"
++#define SKF_DBG "sssssisiTTiiississiiiiiiiii"
+ 
+ static void socket_header(PktBuf *buf, bool debug)
+ {
+@@ -808,6 +808,105 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
+ 	return true;
+ }
+ 
++#define PSF_STD "ssssTTiiii"
 +
 +static void socket_ps_header(PktBuf *buf)
 +{
 +	pktbuf_write_RowDescription(buf, PSF_STD,
 +				"type", "user", "database", "state",
 +				"connect_time", "request_time",
-+				"entries", "size",
-+				"parses", "binds", "outstanding");
++				"idx_size", "requested_parses", "executed_parses",
++				"binds");
 +}
 +
 +static void socket_ps_row(PktBuf *buf, PgSocket *sk, const char *state)
 +{
-+	int foo = 0;
-+	if (is_server_socket(sk)) {
-+		struct List *el, *tmp_l;
-+		list_for_each_safe(el, &sk->server_outstanding_parse_packets, tmp_l) {
-+			foo++;
-+		}
-+	}
++	int indexed = is_server_socket(sk) ? \
++		HASH_COUNT(sk->ps_state.server_ps_entries) : HASH_COUNT(sk->ps_state.client_ps_entries);
 +
 +	pktbuf_write_DataRow(buf, PSF_STD,
 +			     is_server_socket(sk) ? "S" :"C",
@@ -34,11 +40,10 @@ index 10b2a0b..9e31fd3 100644
 +			     state,
 +			     sk->connect_time,
 +			     sk->request_time,
-+			     cf_disable_prepared_statement_support ? 0 : is_server_socket(sk) ? HASH_COUNT(sk->server_prepared_statements) : HASH_COUNT(sk->prepared_statements),
-+			     cf_disable_prepared_statement_support ? 0 : is_server_socket(sk) ? sizeof_server_ps_cache(sk) : sizeof_client_ps_cache(sk),
-+				 sk->ps_binds,
-+				 sk->ps_parses,
-+				 foo);
++			     indexed,
++			     sk->ps_state.requested_parses_total,
++			     sk->ps_state.executed_parses_total,
++			     sk->ps_state.binds_total);
 +}
 +
 +/* Helper for SHOW CLIENT_PS/SERVER_PS */
@@ -81,6 +86,11 @@ index 10b2a0b..9e31fd3 100644
 +/* Command: SHOW SERVER PS */
 +static bool admin_show_server_ps(PgSocket *admin, const char *arg)
 +{
++	if (cf_disable_prepared_statement_support) {
++		admin_error(admin, "prepared statement support has been disabled");
++		return true;
++	}
++
 +	struct List *item;
 +	PgPool *pool;
 +	PktBuf *buf = pktbuf_dynamic(256);
@@ -109,7 +119,7 @@ index 10b2a0b..9e31fd3 100644
  /* Command: SHOW POOLS */
  static bool admin_show_pools(PgSocket *admin, const char *arg)
  {
-@@ -1379,6 +1479,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
+@@ -1379,6 +1478,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
  
  static struct cmd_lookup show_map [] = {
  	{"clients", admin_show_clients},
@@ -117,7 +127,7 @@ index 10b2a0b..9e31fd3 100644
  	{"config", admin_show_config},
  	{"databases", admin_show_databases},
  	{"fds", admin_show_fds},
-@@ -1386,6 +1487,7 @@ static struct cmd_lookup show_map [] = {
+@@ -1386,6 +1486,7 @@ static struct cmd_lookup show_map [] = {
  	{"lists", admin_show_lists},
  	{"pools", admin_show_pools},
  	{"servers", admin_show_servers},

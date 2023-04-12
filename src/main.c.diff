@@ -1,5 +1,5 @@
 diff --git a/src/main.c b/src/main.c
-index fb76a56..b499cb1 100644
+index fb76a56..ed2f922 100644
 --- a/src/main.c
 +++ b/src/main.c
 @@ -184,6 +184,9 @@ char *cf_server_tls_cert_file;
@@ -21,4 +21,30 @@ index fb76a56..b499cb1 100644
 +
  {NULL}
  };
+ 
+@@ -891,10 +897,11 @@ int main(int argc, char *argv[])
+ 			break;
+ 		case 'V':
+ 			printf("%s\n", PACKAGE_STRING);
+-			printf("libevent %s\nadns: %s\ntls: %s\n",
++			printf("libevent %s\nadns: %s\ntls: %s\nps: %s\n",
+ 			       event_get_version(),
+ 			       adns_get_backend(),
+-			       tls_backend_version());
++			       tls_backend_version(),
++			       ps_version());
+ #ifdef USE_SYSTEMD
+ 			printf("systemd: yes\n");
+ #endif
+@@ -1005,9 +1012,9 @@ int main(int argc, char *argv[])
+ 
+ 	write_pidfile();
+ 
+-	log_info("process up: %s, libevent %s (%s), adns: %s, tls: %s", PACKAGE_STRING,
++	log_info("process up: %s, libevent %s (%s), adns: %s, tls: %s, ps: %s", PACKAGE_STRING,
+ 		 event_get_version(), event_base_get_method(pgb_event_base), adns_get_backend(),
+-		 tls_backend_version());
++		 tls_backend_version(), ps_version());
+ 
+ 	sd_notify(0, "READY=1");
  

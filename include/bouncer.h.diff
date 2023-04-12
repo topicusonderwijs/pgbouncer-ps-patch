@@ -1,5 +1,5 @@
 diff --git a/include/bouncer.h b/include/bouncer.h
-index 42b5bf2..51c4a29 100644
+index 42b5bf2..e4c109d 100644
 --- a/include/bouncer.h
 +++ b/include/bouncer.h
 @@ -96,6 +96,7 @@ typedef union PgAddr PgAddr;
@@ -41,23 +41,16 @@ index 42b5bf2..51c4a29 100644
  
  /*
   * A client or server connection.
-@@ -551,6 +562,15 @@ struct PgSocket {
+@@ -551,6 +562,8 @@ struct PgSocket {
  
  	VarCache vars;		/* state of interesting server parameters */
  
-+	PgParsedPreparedStatement *prepared_statements;
-+
-+	uint64_t nextUniquePreparedStatementID;
-+	PgServerPreparedStatement *server_prepared_statements;
-+	struct List server_outstanding_parse_packets;
-+
-+	uint64_t ps_parses;
-+	uint64_t ps_binds;
++	struct PreparedStatementSocketState ps_state;		/* state of prepared statements on this socket */
 +
  	SBuf sbuf;		/* stream buffer, must be last */
  };
  
-@@ -664,6 +684,9 @@ extern char *cf_server_tls_cert_file;
+@@ -664,6 +677,9 @@ extern char *cf_server_tls_cert_file;
  extern char *cf_server_tls_key_file;
  extern char *cf_server_tls_ciphers;
  

@@ -38,6 +38,12 @@ make
 sudo make install
 ```
 
+MacOS instructions:
+```
+# Run configure on MaxOS with homebrew
+./configure --prefix=/usr/local --with-openssl=/opt/homebrew/Cellar/openssl@1.1/1.1.1t/
+```
+
 ### Configure
 Create a configuration file, using `./etc/pgbouncer.ini` as a starting point.
 

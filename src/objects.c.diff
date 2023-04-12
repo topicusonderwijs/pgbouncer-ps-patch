@@ -1,26 +1,54 @@
 diff --git a/src/objects.c b/src/objects.c
-index 9a42856..aaad078 100644
+index 9a42856..eac4fa1 100644
 --- a/src/objects.c
 +++ b/src/objects.c
-@@ -88,6 +88,7 @@ static void construct_client(void *obj)
+@@ -56,6 +56,10 @@ struct Slab *db_cache;
+ struct Slab *pool_cache;
+ struct Slab *user_cache;
+ struct Slab *iobuf_cache;
++struct Slab *server_ps_cache;
++struct Slab *client_ps_cache;
++struct Slab *client_ps_query_cache;
++struct Slab *client_ps_param_cache;
+ 
+ /*
+  * libevent may still report events when event_del()
+@@ -88,6 +92,9 @@ static void construct_client(void *obj)
  	list_init(&client->head);
  	sbuf_init(&client->sbuf, client_proto);
  	client->state = CL_FREE;
-+  client->prepared_statements = NULL;
++
++	if (!cf_disable_prepared_statement_support)
++		ps_client_socket_state_init(&client->ps_state);
  }
  
  static void construct_server(void *obj)
-@@ -98,6 +99,9 @@ static void construct_server(void *obj)
+@@ -98,6 +105,9 @@ static void construct_server(void *obj)
  	list_init(&server->head);
  	sbuf_init(&server->sbuf, server_proto);
  	server->state = SV_FREE;
-+	server->nextUniquePreparedStatementID = 1;
-+	server->server_prepared_statements = NULL;
-+	list_init(&server->server_outstanding_parse_packets);
++
++	if (!cf_disable_prepared_statement_support)
++		ps_server_socket_state_init(&server->ps_state);
  }
  
  /* compare string with PgUser->name, for usage with btree */
-@@ -186,6 +190,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
+@@ -140,6 +150,14 @@ void init_caches(void)
+ 	server_cache = slab_create("server_cache", sizeof(PgSocket), 0, construct_server, USUAL_ALLOC);
+ 	client_cache = slab_create("client_cache", sizeof(PgSocket), 0, construct_client, USUAL_ALLOC);
+ 	iobuf_cache = slab_create("iobuf_cache", IOBUF_SIZE, 0, do_iobuf_reset, USUAL_ALLOC);
++
++	if (!cf_disable_prepared_statement_support) {
++		ps_init();
++		server_ps_cache = slab_create("server_ps_cache", sizeof(PgServerPreparedStatement), 0, construct_server_ps, USUAL_ALLOC);
++		client_ps_cache = slab_create("client_ps_cache", sizeof(PgParsedPreparedStatement), 0, construct_client_ps, USUAL_ALLOC);
++		client_ps_query_cache = slab_create("client_ps_query_cache", sizeof(PgQueryExtent), 0, construct_query_extent, USUAL_ALLOC);
++		client_ps_param_cache = slab_create("client_ps_param_cache", sizeof(PgParamDataTypeList), 0, construct_param_list, USUAL_ALLOC);
++	}
+ }
+ 
+ /* state change means moving between lists */
+@@ -186,6 +204,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
  	case CL_FREE:
  		varcache_clean(&client->vars);
  		slab_free(client_cache, client);
@@ -28,7 +56,7 @@ index 9a42856..aaad078 100644
  		break;
  	case CL_JUSTFREE:
  		statlist_append(&justfree_client_list, &client->head);
-@@ -256,6 +261,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
+@@ -256,6 +275,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
  	case SV_FREE:
  		varcache_clean(&server->vars);
  		slab_free(server_cache, server);
@@ -36,3 +64,21 @@ index 9a42856..aaad078 100644
  		break;
  	case SV_JUSTFREE:
  		statlist_append(&justfree_server_list, &server->head);
+@@ -1987,6 +2007,17 @@ void objects_cleanup(void)
+ 	memset(&user_tree, 0, sizeof user_tree);
+ 	memset(&autodatabase_idle_list, 0, sizeof autodatabase_idle_list);
+ 
++	if (!cf_disable_prepared_statement_support) {
++		slab_destroy(client_ps_param_cache);
++		client_ps_param_cache = NULL;
++		slab_destroy(client_ps_query_cache);
++		client_ps_query_cache = NULL;
++		slab_destroy(client_ps_cache);
++		client_ps_cache = NULL;
++		slab_destroy(server_ps_cache);
++		server_ps_cache = NULL;
++	}
++
+ 	slab_destroy(server_cache);
+ 	server_cache = NULL;
+ 	slab_destroy(client_cache);

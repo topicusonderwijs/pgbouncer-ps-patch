@@ -1,45 +1,74 @@
 #include "bouncer.h"
 
-#include <usual/crypto/csrandom.h>
-#include <usual/hashing/spooky.h>
-#include <usual/hashtab-impl.h>
+#include <usual/slab.h>
+
+const char *ps_version(void)
+{
+	return PREPARED_STATEMENT_VERSION;
+}
+
+void ps_client_socket_state_init(struct PreparedStatementSocketState* state)
+{
+	state->client_ps_entries = NULL;
+
+	state->server_next_dst_ps_id = 0;
+	state->server_ps_entries = NULL;
+}
+
+void ps_server_socket_state_init(struct PreparedStatementSocketState* state)
+{
+	state->server_next_dst_ps_id = 1;
+	state->server_ps_entries = NULL;
+	list_init(&state->server_outstanding_parse_packets);
+
+	state->client_ps_entries = NULL;
+}
 
 static PgParsedPreparedStatement *create_prepared_statement(PgParsePacket *parse_packet)
 {
-	static bool initialized;
-	static uint32_t rand_seed;
-	PgParsedPreparedStatement *s = NULL;
+	PgParsedPreparedStatement *s;
 
-	if (!initialized) {
-		initialized = true;
-		rand_seed = csrandom();
-	}
+	s = slab_alloc(client_ps_cache);
+	
+	s->query_hash[0] = parse_packet->query_hash[0];
+	s->query_hash[1] = parse_packet->query_hash[1];
 
-	s = (PgParsedPreparedStatement *)malloc(sizeof(*s));
-	s->name = parse_packet->name;
-	s->pkt = parse_packet;
-	s->query_hash[0] = rand_seed;
-	s->query_hash[1] = 0;
-	spookyhash(parse_packet->query, strlen(parse_packet->query), &s->query_hash[0], &s->query_hash[1]);
+	/* copy Parse packet */
+	memcpy(s->pkt.name, parse_packet->name, sizeof(parse_packet->name));
+	s->pkt.query_hash[0] = parse_packet->query_hash[0];
+	s->pkt.query_hash[1] = parse_packet->query_hash[1];
+	s->pkt.query_len = parse_packet->query_len;
+	s->pkt.query = parse_packet->query;
+	s->pkt.num_parameters = parse_packet->num_parameters;
+	s->pkt.param_data_types = parse_packet->param_data_types;
+
+	s->name = s->pkt.name;
 
 	return s;
 }
 
+static void client_prepared_statement_free(PgParsedPreparedStatement *ps)
+{
+	parse_packet_free(&ps->pkt);
+	slab_free(client_ps_cache, ps);
+}
+
 static PgServerPreparedStatement *create_server_prepared_statement(PgSocket *client, PgParsedPreparedStatement *ps)
 {
-	PgServerPreparedStatement *s = NULL;
-	char statement[23];
+	PgServerPreparedStatement *s;
 
-	s = (PgServerPreparedStatement *)malloc(sizeof(*s));
+	s = slab_alloc(server_ps_cache);
 	*(uint64_t *)&s->query_hash[0] = ps->query_hash[0];
 	*(uint64_t *)&s->query_hash[1] = ps->query_hash[1];
+	s->id = client->link->ps_state.server_next_dst_ps_id++;
 	s->bind_count = 0;
 
-	// FIXME: length??
-	snprintf(statement, 23, "B_%lld", client->link->nextUniquePreparedStatementID++);
-	s->name = strdup(statement);
-
 	return s;
+}
+
+static void server_prepared_statement_free(PgServerPreparedStatement *ps)
+{
+	slab_free(server_ps_cache, ps);
 }
 
 static int bind_count_sort(struct PgServerPreparedStatement *a, struct PgServerPreparedStatement *b)
@@ -51,15 +80,15 @@ static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 {
 	struct PgServerPreparedStatement *current, *tmp;
 	PktBuf *buf;
-	unsigned int cached_query_count = HASH_COUNT(server->server_prepared_statements);
+	unsigned int cached_query_count = HASH_COUNT(server->ps_state.server_ps_entries);
 
 	if (cached_query_count >= (unsigned int)cf_prepared_statement_cache_queries) {
-		HASH_SORT(server->server_prepared_statements, bind_count_sort);
-		HASH_ITER(hh, server->server_prepared_statements, current, tmp) {
-			HASH_DEL(server->server_prepared_statements, current);
+		HASH_SORT(server->ps_state.server_ps_entries, bind_count_sort);
+		HASH_ITER(hh, server->ps_state.server_ps_entries, current, tmp) {
+			HASH_DEL(server->ps_state.server_ps_entries, current);
 			cached_query_count--;
 
-			buf = create_close_packet(current->name);
+			buf = create_close_packet(current->id);
 
 			if (!pktbuf_send_immediate(buf, server)) {
 				pktbuf_free(buf);
@@ -68,15 +97,20 @@ static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 
 			pktbuf_free(buf);
 
-			slog_noise(server, "prepared statement '%s' deleted from server cache", current->name);
-			free(current->name);
-			free(current);
+			if (cf_verbose > 1) {
+				dst_ps_name(stmt->id);
+				slog_noise(server, "prepared statement '%s' deleted from server cache", dst_ps_name);
+			}
+			server_prepared_statement_free(current);
 			break;
 		}
 	}
 
-	slog_noise(server, "prepared statement '%s' added to server cache, %d cached items", stmt->name, cached_query_count + 1);
-	HASH_ADD(hh, server->server_prepared_statements, query_hash, sizeof(stmt->query_hash), stmt);
+	if (cf_verbose > 1) {
+		dst_ps_name(stmt->id);
+		slog_noise(server, "prepared statement '%s' added to server cache, %d cached items", dst_ps_name, cached_query_count + 1);
+	}
+	HASH_ADD(hh, server->ps_state.server_ps_entries, query_hash, sizeof(stmt->query_hash), stmt);
 
 	return true;
 }
@@ -84,11 +118,11 @@ static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 {
 	SBuf *sbuf = &client->sbuf;
+	PktBuf *buf;
 	PgSocket *server = client->link;
-	PgParsePacket *pp;
+	struct PgParsePacket pp;
 	PgParsedPreparedStatement *ps = NULL;
 	PgServerPreparedStatement *link_ps = NULL;
-	PktBuf *buf;
 	struct OutstandingParsePacket *opp = NULL;
 
 	Assert(server);
@@ -97,23 +131,28 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		return false;
 
 	/* update stats */
-	client->ps_parses++;
+	client->ps_state.requested_parses_total++;
 	client->pool->stats.ps_client_parse_count++;
 
-	ps = create_prepared_statement(pp);
-	// slog_noise(client, "P packet received, stmt %s, query hash '%ld%ld', query '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], ps->pkt->query);
-
-	HASH_FIND(hh, server->server_prepared_statements, ps->query_hash, sizeof(ps->query_hash), link_ps);
+	ps = create_prepared_statement(&pp);
 
 	sbuf_prepare_skip(sbuf, pkt->len);
 	if (!sbuf_flush(sbuf))
 		return false;
 
+	HASH_FIND(hh, server->ps_state.server_ps_entries, ps->query_hash, sizeof(ps->query_hash), link_ps);
 	if (link_ps) {
 		/* Statement already prepared on this link, do not forward packet */
-		slog_debug(client, "handle_parse_command: mapping statement '%s' to '%s' (query hash '%lld%lld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
+		if (cf_verbose > 0) {
+			dst_ps_name(link_ps->id);
+			slog_debug(client, "handle_parse_command: mapping statement '%s' to '%s' (query hash '%lld/%lld')", ps->name, dst_ps_name, ps->query_hash[0], ps->query_hash[1]);
+		}
 
 		buf = create_parse_complete_packet();
+
+		/* update stats */
+		server->ps_state.requested_parses_total++;
+
 		if (!pktbuf_send_immediate(buf, client)) {
 			pktbuf_free(buf);
 			return false;
@@ -122,24 +161,28 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		pktbuf_free(buf);
 
 		/* Register statement on client link */
-		HASH_ADD_KEYPTR(hh, client->prepared_statements, ps->name, strlen(ps->name), ps);
+		HASH_ADD_KEYPTR(hh, client->ps_state.client_ps_entries, ps->name, strlen(ps->name), ps);
 	}
 	else {
 		/* Statement not prepared on this link, sent modified P packet */
 		link_ps = create_server_prepared_statement(client, ps);
 
-		slog_debug(client, "handle_parse_command: creating mapping for statement '%s' to '%s' (query hash '%lld%lld')", ps->name, link_ps->name, ps->query_hash[0], ps->query_hash[1]);
+		if (cf_verbose > 0) {
+			dst_ps_name(link_ps->id);
+			slog_debug(client, "handle_parse_command: creating mapping for statement '%s' to '%s' (query hash '%lld/%lld')", ps->name, dst_ps_name, ps->query_hash[0], ps->query_hash[1]);
+		}
 
-		buf = create_parse_packet(link_ps->name, ps->pkt);
+		buf = create_parse_packet(link_ps->id, &ps->pkt);
 
 		/* update stats */
-		server->ps_parses++;
+		client->ps_state.executed_parses_total++;
+		server->ps_state.executed_parses_total++;
 		client->pool->stats.ps_server_parse_count++;
 
 		/* Track Parse command sent to server */
 		opp = calloc(sizeof *opp, 1);
 		opp->ignore = false;
-		list_append(&server->server_outstanding_parse_packets, &opp->node);
+		list_append(&server->ps_state.server_outstanding_parse_packets, &opp->node);
 
 		if (!pktbuf_send_immediate(buf, server)) {
 			pktbuf_free(buf);
@@ -149,7 +192,7 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		pktbuf_free(buf);
 
 		/* Register statement on client and server link */
-		HASH_ADD_KEYPTR(hh, client->prepared_statements, ps->name, strlen(ps->name), ps);
+		HASH_ADD_KEYPTR(hh, client->ps_state.client_ps_entries, ps->name, strlen(ps->name), ps);
 		if (!register_prepared_statement(server, link_ps))
 			return false;
 	}
@@ -168,16 +211,13 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
 	Assert(server);
 
-	/* update stats */
-	client->pool->stats.ps_bind_count++;
-
-	HASH_FIND_STR(client->prepared_statements, ps_name, ps);
+	HASH_FIND_STR(client->ps_state.client_ps_entries, ps_name, ps);
 	if (!ps) {
 		disconnect_client(client, true, "prepared statement '%s' not found", ps_name);
 		return false;
 	}
 
-	HASH_FIND(hh, client->link->server_prepared_statements, ps->query_hash, sizeof(ps->query_hash), link_ps);
+	HASH_FIND(hh, client->link->ps_state.server_ps_entries, ps->query_hash, sizeof(ps->query_hash), link_ps);
 
 	sbuf_prepare_skip(sbuf, pkt->len);
 	if (!sbuf_flush(sbuf))
@@ -187,18 +227,21 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		/* Statement is not prepared on this link, sent P packet first */
 		link_ps = create_server_prepared_statement(client, ps);
 
-		slog_debug(server, "handle_bind_command: prepared statement '%s' (query hash '%lld%lld') not available on server, preparing '%s' before bind", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
+		if (cf_verbose > 0) {
+			dst_ps_name(link_ps->id);
+			slog_debug(server, "handle_bind_command: prepared statement '%s' (query hash '%lld/%lld') not available on server, preparing '%s' before bind", ps->name, ps->query_hash[0], ps->query_hash[1], dst_ps_name);
+		}
 
-		buf = create_parse_packet(link_ps->name, ps->pkt);
+		buf = create_parse_packet(link_ps->id, &ps->pkt);
 
 		/* update stats */
-		server->ps_parses++;
+		server->ps_state.executed_parses_total++;
 		client->pool->stats.ps_server_parse_count++;
 
 		/* Track Parse command sent to server */
 		opp = calloc(sizeof *opp, 1);
 		opp->ignore = true;
-		list_append(&server->server_outstanding_parse_packets, &opp->node);
+		list_append(&server->ps_state.server_outstanding_parse_packets, &opp->node);
 		if (!pktbuf_send_immediate(buf, server)) {
 			pktbuf_free(buf);
 			return false;
@@ -211,9 +254,12 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 			return false;
 	}
 
-	slog_debug(client, "handle_bind_command: mapped statement '%s' (query hash '%lld%lld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
+	if (cf_verbose > 1) {
+		dst_ps_name(link_ps->id);
+		slog_debug(client, "handle_bind_command: mapped statement '%s' (query hash '%lld/%lld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], dst_ps_name);
+	}
 
-	if (!copy_bind_packet(client, &buf, link_ps->name, pkt)) {
+	if (!copy_bind_packet(client, &buf, link_ps->id, pkt)) {
 		pktbuf_free(buf);
 		return false;
 	}
@@ -226,9 +272,10 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 	pktbuf_free(buf);
 
 	/* update stats */
-	client->ps_binds++;
-	server->ps_binds++;
-	link_ps->bind_count++;
+	client->ps_state.binds_total++;
+	server->ps_state.binds_total++;
+	link_ps->bind_count++;  // is dit een stat? of functioneel een counter
+	client->pool->stats.ps_bind_count++;
 
 	return true;
 }
@@ -243,13 +290,13 @@ bool handle_describe_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 
 	Assert(server);
 
-	HASH_FIND_STR(client->prepared_statements, ps_name, ps);
+	HASH_FIND_STR(client->ps_state.client_ps_entries, ps_name, ps);
 	if (!ps) {
 		disconnect_client(client, true, "prepared statement '%s' not found", ps_name);
 		return false;
 	}
 
-	HASH_FIND(hh, client->link->server_prepared_statements, ps->query_hash, sizeof(ps->query_hash), link_ps);
+	HASH_FIND(hh, client->link->ps_state.server_ps_entries, ps->query_hash, sizeof(ps->query_hash), link_ps);
 
 	// TODO: link_ps missing -> no parse, should not be possible
 
@@ -257,9 +304,12 @@ bool handle_describe_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 	if (!sbuf_flush(sbuf))
 		return false;
 
-	slog_debug(client, "handle_describe_command: mapped statement '%s' (query hash '%lld%lld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], link_ps->name);
+	if (cf_verbose > 1) {
+		dst_ps_name(link_ps->id);
+		slog_debug(client, "handle_describe_command: mapped statement '%s' (query hash '%lld/%lld') to '%s'", ps->name, ps->query_hash[0], ps->query_hash[1], dst_ps_name);
+	}
 
-	buf = create_describe_packet(link_ps->name);
+	buf = create_describe_packet(link_ps->id);
 
 	if (!pktbuf_send_immediate(buf, server)) {
 		pktbuf_free(buf);
@@ -277,12 +327,11 @@ bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket
 	PgParsedPreparedStatement *ps = NULL;
 	PktBuf *buf;
 
-	HASH_FIND_STR(client->prepared_statements, close_packet->name, ps);
+	HASH_FIND_STR(client->ps_state.client_ps_entries, close_packet->name, ps);
 	if (ps) {
-		slog_noise(client, "handle_close_command: removed '%s' from cached prepared statements, items remaining %u", close_packet->name, HASH_COUNT(client->prepared_statements));
-		HASH_DELETE(hh, client->prepared_statements, ps);
-		parse_packet_free(ps->pkt);
-		free(ps);
+		HASH_DELETE(hh, client->ps_state.client_ps_entries, ps);
+		client_prepared_statement_free(ps);
+		slog_noise(client, "handle_close_command: removed '%s' from cached prepared statements, items remaining %u", close_packet->name, HASH_COUNT(client->ps_state.client_ps_entries));
 
 		/* Do not forward packet to server */
 		sbuf_prepare_skip(sbuf, pkt->len);
@@ -306,13 +355,10 @@ void ps_client_free(PgSocket *client)
 {
 	struct PgParsedPreparedStatement *current, *tmp;
 
-	HASH_ITER(hh, client->prepared_statements, current, tmp) {
-		HASH_DEL(client->prepared_statements, current);
-		parse_packet_free(current->pkt);
-		free(current);
+	HASH_ITER(hh, client->ps_state.client_ps_entries, current, tmp) {
+		HASH_DEL(client->ps_state.client_ps_entries, current);
+		client_prepared_statement_free(current);
 	}
-
-	free(client->prepared_statements);
 }
 
 void ps_server_free(PgSocket *server)
@@ -321,40 +367,26 @@ void ps_server_free(PgSocket *server)
 	struct List *el, *tmp_l;
 	struct OutstandingParsePacket *opp;
 
-	HASH_ITER(hh, server->server_prepared_statements, current, tmp_s) {
-		HASH_DEL(server->server_prepared_statements, current);
-		free(current->name);
-		free(current);
+	HASH_ITER(hh, server->ps_state.server_ps_entries, current, tmp_s) {
+		HASH_DEL(server->ps_state.server_ps_entries, current);
+		server_prepared_statement_free(current);
 	}
 
-	list_for_each_safe(el, &server->server_outstanding_parse_packets, tmp_l) {
+	list_for_each_safe(el, &server->ps_state.server_outstanding_parse_packets, tmp_l) {
 		opp = container_of(el, struct OutstandingParsePacket, node);
 		list_del(&opp->node);
 		free(opp);
 	}
-	free(server->server_prepared_statements);
 }
 
-uint64_t sizeof_client_ps_cache(PgSocket *client)
+void construct_server_ps(void *obj)
 {
-	uint64_t size = 0;
-
-	struct PgParsedPreparedStatement *s;
-	for (s = client->prepared_statements; s != NULL; s = s->hh.next) {
-		size += strlen(s->name) + (2 * sizeof(uint64_t)) + sizeof_parse_packet(s->pkt);
-	}
-
-	return size;
+	PgServerPreparedStatement *ps = obj;
+	memset(ps, 0, sizeof(PgServerPreparedStatement));
 }
 
-uint64_t sizeof_server_ps_cache(PgSocket *server)
+void construct_client_ps(void *obj)
 {
-	uint64_t size = 0;
-
-	struct PgServerPreparedStatement *s;
-	for (s = server->server_prepared_statements; s != NULL; s = s->hh.next) {
-		size += (2 * sizeof(uint64_t)) + strlen(s->name) + sizeof(uint64_t);
-	}
-
-	return size;
+	PgParsedPreparedStatement *ps = obj;
+	memset(ps, 0, sizeof(PgParsedPreparedStatement));
 }

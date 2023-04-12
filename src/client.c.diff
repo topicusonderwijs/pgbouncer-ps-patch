@@ -1,23 +1,23 @@
 diff --git a/src/client.c b/src/client.c
-index 67434be..7be4c95 100644
+index 67434be..66fef2d 100644
 --- a/src/client.c
 +++ b/src/client.c
 @@ -884,6 +884,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  {
  	SBuf *sbuf = &client->sbuf;
  	int rfq_delta = 0;
-+	const char *ps_name;
++	char ps_name[MAX_STATEMENT_NAME] = {0};
 +	PgParsedPreparedStatement *ps = NULL;
-+	PgClosePacket *close_packet;
++	struct PgClosePacket close_packet;
  
  	switch (pkt->type) {
  
-@@ -917,10 +920,74 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -917,10 +920,66 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	 * to buffer packets until sync or flush is sent by client
  	 */
  	case 'P':		/* Parse */
 +		if (!cf_disable_prepared_statement_support) {
-+			if (!inspect_parse_packet(client, pkt, &ps_name))
++			if (!inspect_parse_packet(client, pkt, ps_name))
 +				return false;
 +		}
 +		break;
@@ -30,33 +30,25 @@ index 67434be..7be4c95 100644
 +			if (!unmarshall_close_packet(client, pkt, &close_packet))
 +				return false;
 +
-+			if (close_packet && is_close_statement_packet(close_packet)) {
-+				if (!handle_close_statement_command(client, pkt, close_packet))
++			if (is_close_statement_packet(&close_packet)) {
++				if (!handle_close_statement_command(client, pkt, &close_packet))
 +					return false;
 +
 +				client->pool->stats.client_bytes += pkt->len;
 +
-+				free(close_packet->name);
-+				free(close_packet);
-+
 +				/* No further processing required */
 +				return true;
-+			}
-+
-+			if (close_packet) {
-+				free(close_packet->name);
-+				free(close_packet);
 +			}
 +		}
 +		break;
 +
  	case 'B':		/* Bind */
 +		if (!cf_disable_prepared_statement_support) {
-+			if (!inspect_bind_packet(client, pkt, &ps_name))
++			if (!inspect_bind_packet(client, pkt, ps_name))
 +				return false;
 +
-+			if (ps_name) {
-+				HASH_FIND_STR(client->prepared_statements, ps_name, ps);
++			if (strlen(ps_name) > 0) {
++				HASH_FIND_STR(client->ps_state.client_ps_entries, ps_name, ps);
 +				if (!ps)
 +				{
 +					slog_error(client, "lookup failed for prepared statement '%s'", ps_name);
@@ -69,11 +61,11 @@ index 67434be..7be4c95 100644
 +
  	case 'D':		/* Describe */
 +		if (!cf_disable_prepared_statement_support) {
-+			if (!inspect_describe_packet(client, pkt, &ps_name))
++			if (!inspect_describe_packet(client, pkt, ps_name))
 +				return false;
 +
-+			if (ps_name) {
-+				HASH_FIND_STR(client->prepared_statements, ps_name, ps);
++			if (strlen(ps_name) > 0) {
++				HASH_FIND_STR(client->ps_state.client_ps_entries, ps_name, ps);
 +				if (!ps)
 +				{
 +					slog_error(client, "lookup failed for prepared statement '%s'", ps_name);
@@ -87,30 +79,21 @@ index 67434be..7be4c95 100644
  	case 'd':		/* CopyData(F/B) */
  		break;
  
-@@ -964,6 +1031,29 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -964,6 +1023,20 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	client->link->ready = false;
  	client->link->idle_tx = false;
  
-+	if (!cf_disable_prepared_statement_support && ps_name) {
++	if (!cf_disable_prepared_statement_support && strlen(ps_name)>0) {
 +		switch (pkt->type)
 +		{
 +		case 'P':
-+			if (!handle_parse_command(client, pkt, ps_name))
-+				return false;
-+			free((char *)ps_name);
-+			return true;
++			return handle_parse_command(client, pkt, ps_name);
 +
 +		case 'B':
-+			if (!handle_bind_command(client, pkt, ps_name))
-+				return false;
-+			free((char *)ps_name);
-+			return true;
++			return handle_bind_command(client, pkt, ps_name);
 +
 +		case 'D':
-+			if (!handle_describe_command(client, pkt, ps_name))
-+				return false;
-+			free((char *)ps_name);
-+			return true;
++			return handle_describe_command(client, pkt, ps_name);
 +		}
 +	}
 +
