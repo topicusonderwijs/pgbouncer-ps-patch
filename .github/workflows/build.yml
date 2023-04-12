@@ -1,0 +1,36 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: pgbouncer-ps
+
+      - name: Checkout PgBouncer
+        uses: actions/checkout@v3
+        with:
+          repository: pgbouncer/pgbouncer
+          path: pgbouncer
+
+      - name: Build
+        uses: addnab/docker-run-action@v3
+        with:
+            image: centos:7
+            options: -v ${{ github.workspace }}:/src
+            run: |
+                yum -y install libevent-devel openssl-devel python-devel libtool git patch make
+                cd /src/pgbouncer-ps
+                ls -lah
