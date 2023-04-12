@@ -62,7 +62,7 @@ jobs:
             options: -v ${{ github.workspace }}:/src
             run: |
                 yum -y install epel-release
-                yum -y install libevent-devel openssl-devel python-devel libtool git patch make pandoc
+                yum -y install libevent-devel openssl-devel libtool git patch make
                 [ -f "config.mak" ] && make distclean
                 cd /src/pgbouncer
                 ./autogen.sh
