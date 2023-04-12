@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: pgbouncer/pgbouncer
+          ref: pgbouncer_1_18_0
           path: pgbouncer
 
       - name: Build
@@ -44,7 +45,7 @@ jobs:
                 ./configure
                 make
                 cd ..
-                tar -czvf pgbouncer-ps.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
+                tar -czvf pgbouncer-ps-1.18.0.el7.x86_64.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
 
       - name: Publish
         uses: marvinpinto/action-automatic-releases@latest
