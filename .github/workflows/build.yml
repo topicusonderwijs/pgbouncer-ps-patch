@@ -28,7 +28,7 @@ jobs:
           ref: pgbouncer_1_18_0
           path: pgbouncer
 
-      - name: Build
+      - name: Build EL7
         uses: addnab/docker-run-action@v3
         with:
             image: centos:7
@@ -46,6 +46,25 @@ jobs:
                 make
                 cd ..
                 tar -czvf pgbouncer-ps-1.18.0.el7.x86_64.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
+
+      - name: Build EL8
+        uses: addnab/docker-run-action@v3
+        with:
+            image: almalinux:8
+            options: -v ${{ github.workspace }}:/src
+            run: |
+                yum -y install epel-release
+                yum -y install libevent-devel openssl-devel python-devel libtool git patch make pandoc
+                cd /src/pgbouncer-ps
+                ./install-pgbouncer-ps-patch.sh ../pgbouncer
+                cd ../pgbouncer
+                git submodule init
+                git submodule update
+                ./autogen.sh
+                ./configure
+                make
+                cd ..
+                tar -czvf pgbouncer-ps-1.18.0.el8.x86_64.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
 
       - name: Publish
         uses: marvinpinto/action-automatic-releases@latest
