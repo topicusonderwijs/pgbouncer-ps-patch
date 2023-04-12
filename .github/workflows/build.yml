@@ -28,6 +28,16 @@ jobs:
           ref: pgbouncer_1_18_0
           path: pgbouncer
 
+      - name: Apply patch
+        working-directory: ./pgbouncer-ps
+        run: ./install-pgbouncer-ps-patch.sh ../pgbouncer
+
+      - name: Init libusual
+        working-directory: ./pgbouncer
+        run: |
+            git submodule init
+            git submodule update
+
       - name: Build EL7
         uses: addnab/docker-run-action@v3
         with:
@@ -36,11 +46,8 @@ jobs:
             run: |
                 yum -y install epel-release
                 yum -y install libevent-devel openssl-devel python-devel libtool git patch make pandoc
-                cd /src/pgbouncer-ps
-                ./install-pgbouncer-ps-patch.sh ../pgbouncer
                 cd ../pgbouncer
-                git submodule init
-                git submodule update
+                [ -f "config.mak" ] && make distclean
                 ./autogen.sh
                 ./configure
                 make
@@ -55,11 +62,8 @@ jobs:
             run: |
                 yum -y install epel-release
                 yum -y install libevent-devel openssl-devel python-devel libtool git patch make pandoc
-                cd /src/pgbouncer-ps
-                ./install-pgbouncer-ps-patch.sh ../pgbouncer
+                [ -f "config.mak" ] && make distclean
                 cd ../pgbouncer
-                git submodule init
-                git submodule update
                 ./autogen.sh
                 ./configure
                 make
