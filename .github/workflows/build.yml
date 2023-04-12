@@ -43,6 +43,7 @@ jobs:
                 ./autogen.sh
                 ./configure
                 make
-                ls -lah doc/
                 cd ..
-                tar -czvf pgbouncer-ps.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/pgbouncer
+                tar -czvf pgbouncer-ps.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
+
+      - run: ls -lah
