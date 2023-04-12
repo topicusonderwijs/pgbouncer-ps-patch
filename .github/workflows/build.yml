@@ -43,3 +43,4 @@ jobs:
                 ./autogen.sh
                 ./configure
                 make
+                ls -lah
