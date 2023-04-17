@@ -266,8 +266,9 @@ PktBuf *create_parse_packet(PgSocket *client, uint64_t dst_ps_id, PgParsePacket 
 	uint64_t query_offset = 0;
 	query_extent = pkt->query;
 	while (query_offset < pkt->query_len) {
-		int len = pkt->query_len - query_offset <= QUERY_EXTENT_SIZE ? pkt->query_len - query_offset : QUERY_EXTENT_SIZE;
+		int len = pkt->query_len - query_offset > QUERY_EXTENT_SIZE ? QUERY_EXTENT_SIZE : pkt->query_len - query_offset;
 		pktbuf_put_bytes(buf, query_extent->data, len);
+		slog_noise(client, "create_parse_packet: statement=%s, query_len=%llu, query_bytes=%d", dst_ps_name, pkt->query_len, len);
 		query_offset += len;
 		query_extent = query_extent->next;
 	}
@@ -276,9 +277,10 @@ PktBuf *create_parse_packet(PgSocket *client, uint64_t dst_ps_id, PgParsePacket 
 	pktbuf_put_uint16(buf, pkt->num_parameters);
 	if (pkt->num_parameters > 0) {
 		paramTypes = pkt->param_data_types;
-		while (offset <= pkt->num_parameters) {
+		while (offset < pkt->num_parameters) {
 			long len = pkt->num_parameters - offset > QUERY_PARAM_DATA_TYPE_EXTENT_SIZE ? QUERY_PARAM_DATA_TYPE_EXTENT_SIZE : pkt->num_parameters - offset; 
 			pktbuf_put_bytes(buf, paramTypes->values, len * sizeof(u_int32_t));
+			slog_noise(client, "create_parse_packet: statement=%s, params_total=%d, params=%lu, param_bytes=%lu", dst_ps_name, pkt->num_parameters, len, len * sizeof(u_int32_t));
 			offset += QUERY_PARAM_DATA_TYPE_EXTENT_SIZE;
 			paramTypes = paramTypes->next;
 		}
