@@ -47,9 +47,9 @@ static PgParsedPreparedStatement *create_prepared_statement(PgParsePacket *parse
 	return s;
 }
 
-static void client_prepared_statement_free(PgParsedPreparedStatement *ps)
+static void client_prepared_statement_free(PgSocket *client, PgParsedPreparedStatement *ps)
 {
-	parse_packet_free(&ps->pkt);
+	parse_packet_free(client, &ps->pkt);
 	slab_free(client_ps_cache, ps);
 }
 
@@ -172,7 +172,7 @@ bool handle_parse_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 			slog_debug(client, "handle_parse_command: creating mapping for statement '%s' to '%s' (query hash '%lld/%lld')", ps->name, dst_ps_name, ps->query_hash[0], ps->query_hash[1]);
 		}
 
-		buf = create_parse_packet(link_ps->id, &ps->pkt);
+		buf = create_parse_packet(client, link_ps->id, &ps->pkt);
 
 		/* update stats */
 		client->ps_state.executed_parses_total++;
@@ -232,7 +232,7 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 			slog_debug(server, "handle_bind_command: prepared statement '%s' (query hash '%lld/%lld') not available on server, preparing '%s' before bind", ps->name, ps->query_hash[0], ps->query_hash[1], dst_ps_name);
 		}
 
-		buf = create_parse_packet(link_ps->id, &ps->pkt);
+		buf = create_parse_packet(client, link_ps->id, &ps->pkt);
 
 		/* update stats */
 		server->ps_state.executed_parses_total++;
@@ -330,8 +330,8 @@ bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket
 	HASH_FIND_STR(client->ps_state.client_ps_entries, close_packet->name, ps);
 	if (ps) {
 		HASH_DELETE(hh, client->ps_state.client_ps_entries, ps);
-		client_prepared_statement_free(ps);
-		slog_noise(client, "handle_close_command: removed '%s' from cached prepared statements, items remaining %u", close_packet->name, HASH_COUNT(client->ps_state.client_ps_entries));
+		client_prepared_statement_free(client, ps);
+		slog_noise(client, "handle_close_statement_command: removed '%s' from cached prepared statements, items remaining %u", close_packet->name, HASH_COUNT(client->ps_state.client_ps_entries));
 
 		/* Do not forward packet to server */
 		sbuf_prepare_skip(sbuf, pkt->len);
@@ -355,10 +355,12 @@ void ps_client_free(PgSocket *client)
 {
 	struct PgParsedPreparedStatement *current, *tmp;
 
+	int item_cnt = HASH_COUNT(client->ps_state.client_ps_entries);
 	HASH_ITER(hh, client->ps_state.client_ps_entries, current, tmp) {
 		HASH_DEL(client->ps_state.client_ps_entries, current);
-		client_prepared_statement_free(current);
+		client_prepared_statement_free(client, current);
 	}
+	slog_noise(client, "ps_client_free: freed %d prepared statements", item_cnt);
 }
 
 void ps_server_free(PgSocket *server)
@@ -367,16 +369,21 @@ void ps_server_free(PgSocket *server)
 	struct List *el, *tmp_l;
 	struct OutstandingParsePacket *opp;
 
+	int item_cnt = HASH_COUNT(server->ps_state.server_ps_entries);
 	HASH_ITER(hh, server->ps_state.server_ps_entries, current, tmp_s) {
 		HASH_DEL(server->ps_state.server_ps_entries, current);
 		server_prepared_statement_free(current);
 	}
+	slog_noise(server, "ps_server_free: freed %d prepared statements", item_cnt);
 
+	int opp_cnt = 0;
 	list_for_each_safe(el, &server->ps_state.server_outstanding_parse_packets, tmp_l) {
 		opp = container_of(el, struct OutstandingParsePacket, node);
 		list_del(&opp->node);
 		free(opp);
+		opp_cnt++;
 	}
+	slog_noise(server, "ps_server_free: freed %d outstanding parse packets", opp_cnt);
 }
 
 void construct_server_ps(void *obj)

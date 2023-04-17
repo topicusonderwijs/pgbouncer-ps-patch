@@ -247,25 +247,32 @@ bool is_close_statement_packet(PgClosePacket *close_packet)
 	return close_packet->type == 'S' && strlen(close_packet->name) > 0;
 }
 
-PktBuf *create_parse_packet(uint64_t dst_ps_id, PgParsePacket *pkt)
+PktBuf *create_parse_packet(PgSocket *client, uint64_t dst_ps_id, PgParsePacket *pkt)
 {
-	PgQueryExtent *query;
+	PgQueryExtent *query_extent;
 	PgParamDataTypeList *paramTypes;
 	uint16_t offset = 0;
 
 	dst_ps_name(dst_ps_id);
+
+	slog_noise(client, "create_parse_packet: statement=%s, query_len=%llu, params=%d", dst_ps_name, pkt->query_len, pkt->num_parameters);
 
 	PktBuf *buf;
 	int pkt_len = 5 + strlen(dst_ps_name) + 1 + pkt->query_len + 1 + sizeof(u_int16_t) + (pkt->num_parameters * sizeof(u_int32_t));
 	buf = pktbuf_dynamic(pkt_len);
 	pktbuf_start_packet(buf, 'P');
 	pktbuf_put_string(buf, dst_ps_name);
-	query = pkt->query;
-	while (query) {
-		long len = query->next ? QUERY_EXTENT_SIZE : strlen(query->data) + 1;
-		pktbuf_put_bytes(buf, query->data, len);
-		query = query->next;
+
+	uint64_t query_offset = 0;
+	query_extent = pkt->query;
+	while (query_offset < pkt->query_len) {
+		int len = pkt->query_len - query_offset <= QUERY_EXTENT_SIZE ? pkt->query_len - query_offset : QUERY_EXTENT_SIZE;
+		pktbuf_put_bytes(buf, query_extent->data, len);
+		query_offset += len;
+		query_extent = query_extent->next;
 	}
+	pktbuf_put_char(buf, '\0');
+
 	pktbuf_put_uint16(buf, pkt->num_parameters);
 	if (pkt->num_parameters > 0) {
 		paramTypes = pkt->param_data_types;
@@ -429,23 +436,27 @@ void construct_param_list(void *obj)
 	l->next = NULL;
 }
 
-static void query_free(PgQueryExtent *extent)
+static int query_free(PgQueryExtent *extent)
 {
+	int extents_freed = 0;
 	if (extent->next)
-		query_free(extent->next);
+		extents_freed = query_free(extent->next);
 
 	slab_free(client_ps_query_cache, extent);
+	return ++extents_freed;
 }
 
-static void param_data_types_free(PgParamDataTypeList *list)
+static int param_data_types_free(PgParamDataTypeList *list)
 {
+	int freed = 0;
 	if (list->next)
-		param_data_types_free(list->next);
+		freed = param_data_types_free(list->next);
 
 	slab_free(client_ps_param_cache, list);
+	return ++freed;
 }
 
-void parse_packet_free(PgParsePacket *pkt)
+void parse_packet_free(PgSocket *client, PgParsePacket *pkt)
 {
 	query_free(pkt->query);
 

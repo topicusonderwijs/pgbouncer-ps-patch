@@ -1,12 +1,12 @@
 diff --git a/configure.ac b/configure.ac
-index d41f29a..adac707 100644
+index d41f29a..19dd393 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -8,6 +8,8 @@ AC_CONFIG_SRCDIR(src/janitor.c)
  AC_CONFIG_HEADERS([lib/usual/config.h])
  AC_PREREQ([2.59])
  
-+AC_DEFINE(PREPARED_STATEMENT_VERSION, "0.5-rc.1", [Define the prepared statement module version.])
++AC_DEFINE(PREPARED_STATEMENT_VERSION, "0.5-rc.2", [Define the prepared statement module version.])
 +
  dnl basic init
  AC_USUAL_INIT

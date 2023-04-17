@@ -50,7 +50,7 @@ bool unmarshall_close_packet(PgSocket *client, PktHdr *pkt, PgClosePacket *close
 
 bool is_close_statement_packet(PgClosePacket *close_packet);
 
-PktBuf *create_parse_packet(uint64_t dst_ps_id, PgParsePacket *parse_packet);
+PktBuf *create_parse_packet(PgSocket *client, uint64_t dst_ps_id, PgParsePacket *parse_packet);
 PktBuf *create_parse_complete_packet(void);
 PktBuf *create_describe_packet(uint64_t dst_ps_id);
 PktBuf *create_close_packet(uint64_t dst_ps_id);
@@ -58,4 +58,4 @@ PktBuf *create_close_complete_packet(void);
 
 bool copy_bind_packet(PgSocket *client, PktBuf **buf_p, uint64_t dst_ps_id, PktHdr *pkt);
 
-void parse_packet_free(PgParsePacket *pkt);
+void parse_packet_free(PgSocket *client, PgParsePacket *pkt);

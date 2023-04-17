@@ -1,5 +1,5 @@
 diff --git a/src/objects.c b/src/objects.c
-index 9a42856..eac4fa1 100644
+index 9a42856..cd6fb14 100644
 --- a/src/objects.c
 +++ b/src/objects.c
 @@ -56,6 +56,10 @@ struct Slab *db_cache;
@@ -48,22 +48,22 @@ index 9a42856..eac4fa1 100644
  }
  
  /* state change means moving between lists */
-@@ -186,6 +204,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
+@@ -185,6 +203,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
+ 	switch (client->state) {
  	case CL_FREE:
  		varcache_clean(&client->vars);
- 		slab_free(client_cache, client);
 +		ps_client_free(client);
+ 		slab_free(client_cache, client);
  		break;
  	case CL_JUSTFREE:
- 		statlist_append(&justfree_client_list, &client->head);
-@@ -256,6 +275,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
+@@ -255,6 +274,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
+ 	switch (server->state) {
  	case SV_FREE:
  		varcache_clean(&server->vars);
- 		slab_free(server_cache, server);
 +		ps_server_free(server);
+ 		slab_free(server_cache, server);
  		break;
  	case SV_JUSTFREE:
- 		statlist_append(&justfree_server_list, &server->head);
 @@ -1987,6 +2007,17 @@ void objects_cleanup(void)
  	memset(&user_tree, 0, sizeof user_tree);
  	memset(&autodatabase_idle_list, 0, sizeof autodatabase_idle_list);
