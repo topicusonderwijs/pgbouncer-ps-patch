@@ -1,5 +1,5 @@
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/topicus-education-ops/pgbouncer-ps-patch/blob/master/LICENSE.md)
-[![Generic badge](https://img.shields.io/badge/release-1.14.0-blue.svg)](https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_1_14_0)
+[![Generic badge](https://img.shields.io/badge/release-1.18.0-blue.svg)](https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_1_18_0)
 
 
 # PgBouncer with prepared statement support
