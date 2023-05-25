@@ -102,6 +102,10 @@ static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 				slog_noise(server, "prepared statement '%s' deleted from server cache", dst_ps_name);
 			}
 			server_prepared_statement_free(current);
+
+			/* update stats */
+			server->ps_state.closes_total++;
+
 			break;
 		}
 	}
@@ -347,6 +351,9 @@ bool handle_close_statement_command(PgSocket *client, PktHdr *pkt, PgClosePacket
 
 		pktbuf_free(buf);
 	}
+
+	/* update stats */
+	client->ps_state.closes_total++;
 
 	return true;
 }

@@ -1,5 +1,5 @@
 diff --git a/src/admin.c b/src/admin.c
-index 10b2a0b..caa929e 100644
+index 10b2a0b..18c320a 100644
 --- a/src/admin.c
 +++ b/src/admin.c
 @@ -588,8 +588,8 @@ static bool admin_show_users(PgSocket *admin, const char *arg)
@@ -13,24 +13,24 @@ index 10b2a0b..caa929e 100644
  
  static void socket_header(PktBuf *buf, bool debug)
  {
-@@ -808,6 +808,105 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
+@@ -808,6 +808,107 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
  	return true;
  }
  
-+#define PSF_STD "ssssTTiiii"
++#define PSF_STD "ssssTTiiiiii"
 +
 +static void socket_ps_header(PktBuf *buf)
 +{
 +	pktbuf_write_RowDescription(buf, PSF_STD,
 +				"type", "user", "database", "state",
 +				"connect_time", "request_time",
-+				"idx_size", "requested_parses", "executed_parses",
-+				"binds");
++				"cache_size", "cache_hit",
++				"req_parses", "exec_parses", "binds", "closes");
 +}
 +
 +static void socket_ps_row(PktBuf *buf, PgSocket *sk, const char *state)
 +{
-+	int indexed = is_server_socket(sk) ? \
++	int cache_size = is_server_socket(sk) ? \
 +		HASH_COUNT(sk->ps_state.server_ps_entries) : HASH_COUNT(sk->ps_state.client_ps_entries);
 +
 +	pktbuf_write_DataRow(buf, PSF_STD,
@@ -40,10 +40,12 @@ index 10b2a0b..caa929e 100644
 +			     state,
 +			     sk->connect_time,
 +			     sk->request_time,
-+			     indexed,
++			     cache_size,
++			     sk->ps_state.binds_total > 0 ? (int) ((100*sk->ps_state.binds_total - sk->ps_state.executed_parses_total)/sk->ps_state.binds_total) : 0,
 +			     sk->ps_state.requested_parses_total,
 +			     sk->ps_state.executed_parses_total,
-+			     sk->ps_state.binds_total);
++			     sk->ps_state.binds_total,
++			     sk->ps_state.closes_total);
 +}
 +
 +/* Helper for SHOW CLIENT_PS/SERVER_PS */
@@ -119,7 +121,7 @@ index 10b2a0b..caa929e 100644
  /* Command: SHOW POOLS */
  static bool admin_show_pools(PgSocket *admin, const char *arg)
  {
-@@ -1379,6 +1478,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
+@@ -1379,6 +1480,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
  
  static struct cmd_lookup show_map [] = {
  	{"clients", admin_show_clients},
@@ -127,7 +129,7 @@ index 10b2a0b..caa929e 100644
  	{"config", admin_show_config},
  	{"databases", admin_show_databases},
  	{"fds", admin_show_fds},
-@@ -1386,6 +1486,7 @@ static struct cmd_lookup show_map [] = {
+@@ -1386,6 +1488,7 @@ static struct cmd_lookup show_map [] = {
  	{"lists", admin_show_lists},
  	{"pools", admin_show_pools},
  	{"servers", admin_show_servers},

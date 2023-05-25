@@ -27,6 +27,7 @@ typedef struct PreparedStatementSocketState
 	uint64_t requested_parses_total;
 	uint64_t executed_parses_total;
 	uint64_t binds_total;
+	uint64_t closes_total;
 } PreparedStatementSocketState;
 
 const char *ps_version(void);
