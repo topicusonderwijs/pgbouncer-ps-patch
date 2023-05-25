@@ -73,7 +73,7 @@ jobs:
                 tar -czvf pgbouncer-ps-1.19.0.el8.x86_64.tar.gz pgbouncer/AUTHORS pgbouncer/COPYRIGHT pgbouncer/doc/pgbouncer.1 pgbouncer/doc/pgbouncer.5 pgbouncer/pgbouncer
 
       - name: Publish
-        if: github.ref_name == "main"
+        if: 'github.ref_name == "main"'
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -83,7 +83,7 @@ jobs:
             *.tar.gz
 
       - name: Publish
-        if: github.ref_name != "main"
+        if: 'github.ref_name != "main"'
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
