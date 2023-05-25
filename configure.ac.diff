@@ -6,7 +6,7 @@ index d41f29a..07c84e0 100644
  AC_CONFIG_HEADERS([lib/usual/config.h])
  AC_PREREQ([2.59])
  
-+AC_DEFINE(PREPARED_STATEMENT_VERSION, "0.5-rc.3", [Define the prepared statement module version.])
++AC_DEFINE(PREPARED_STATEMENT_VERSION, "0.6", [Define the prepared statement module version.])
 +
  dnl basic init
  AC_USUAL_INIT

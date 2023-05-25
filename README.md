@@ -1,5 +1,5 @@
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/topicus-education-ops/pgbouncer-ps-patch/blob/master/LICENSE.md)
-[![Generic badge](https://img.shields.io/badge/release-1.18.0-blue.svg)](https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_1_18_0)
+[![Generic badge](https://img.shields.io/badge/release-1.19.0-blue.svg)](https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_1_19_0)
 
 
 # PgBouncer with prepared statement support
@@ -18,10 +18,10 @@ Download and install pgbouncer-ps by running the following commands (RHEL/CentOS
 # install required packages - see https://github.com/pgbouncer/pgbouncer#building
 sudo yum install libevent-devel openssl-devel python-devel libtool git patch make -y
 
-# download the latest tested pgbouncer distribution - 1.18
-git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_18_0"
+# download the latest tested pgbouncer distribution - 1.19
+git clone https://github.com/pgbouncer/pgbouncer.git --branch "pgbouncer_1_19_0"
 
-# download pgbouncer-ps extensions - tag v1.18.0+1
+# download pgbouncer-ps extensions - tag v1.19.0+1
 git clone https://github.com/topicusonderwijs/pgbouncer-ps-patch.git
 
 # merge pgbouncer-ps extensions into pgbouncer code
