@@ -76,7 +76,8 @@ jobs:
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: true
+          prerelease: false
+          title: "PgBouncer-PS ${{ github.ref_name }}"
           automatic_release_tag: "${{ github.ref_name }}"
           files: |
             *.tar.gz
