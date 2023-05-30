@@ -14,8 +14,8 @@ index f2c2bac..048ab8f 100644
  #include "janitor.h"
  #include "hba.h"
  #include "pam.h"
-+#include "messages.h"
-+#include "ps.h"
++#include "protocol_message.h"
++#include "prepared_statement.h"
  
  #ifndef WIN32
  #define DEFAULT_UNIX_SOCKET_DIR "/tmp"

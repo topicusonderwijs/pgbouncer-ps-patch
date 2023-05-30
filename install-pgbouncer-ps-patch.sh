@@ -34,11 +34,11 @@ done
 
 # copy pgbouncer-ps source files
 NEWFILES="\
-  include/messages.h\
-  include/ps.h\
+  include/protocol_message.h\
+  include/prepared_statement.h\
   include/common/uthash.h\
-  src/messages.c\
-  src/ps.c\
+  src/protocol_message.c\
+  src/prepared_statement.c\
   "
 echo -n "copying pgbouncer-ps files: "
 for file in $NEWFILES
