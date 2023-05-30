@@ -39,8 +39,11 @@ NEWFILES="\
   include/common/uthash.h\
   src/protocol_message.c\
   src/prepared_statement.c\
+  test/prepared_statement/test.ini\
+  test/test_prepared_statement.py\
   "
 echo -n "copying pgbouncer-ps files: "
+mkdir "$PGDIR/test/prepared_statement"
 for file in $NEWFILES
 do
    echo -n "$file "
