@@ -48,7 +48,7 @@ bool inspect_describe_packet(PgSocket *client, PktHdr *pkt, char *dst_p);
 bool unmarshall_parse_packet(PgSocket *client, PktHdr *pkt, PgParsePacket *parse_packet_p);
 bool unmarshall_close_packet(PgSocket *client, PktHdr *pkt, PgClosePacket *close_packet_p);
 
-bool is_close_statement_packet(PgClosePacket *close_packet);
+bool is_close_named_prepared_statement_packet(PgClosePacket *close_packet);
 
 PktBuf *create_parse_packet(PgSocket *client, uint64_t dst_ps_id, PgParsePacket *parse_packet);
 PktBuf *create_parse_complete_packet(void);

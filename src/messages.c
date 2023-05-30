@@ -242,7 +242,7 @@ failed:
 	return false;
 }
 
-bool is_close_statement_packet(PgClosePacket *close_packet)
+bool is_close_named_prepared_statement_packet(PgClosePacket *close_packet)
 {
 	return close_packet->type == 'S' && strlen(close_packet->name) > 0;
 }

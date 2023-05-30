@@ -1,5 +1,5 @@
 diff --git a/src/client.c b/src/client.c
-index 464d78d..4d2944c 100644
+index 464d78d..03d9a82 100644
 --- a/src/client.c
 +++ b/src/client.c
 @@ -924,6 +924,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
@@ -30,7 +30,7 @@ index 464d78d..4d2944c 100644
 +			if (!unmarshall_close_packet(client, pkt, &close_packet))
 +				return false;
 +
-+			if (is_close_statement_packet(&close_packet)) {
++			if (is_close_named_prepared_statement_packet(&close_packet)) {
 +				if (!handle_close_statement_command(client, pkt, &close_packet))
 +					return false;
 +
