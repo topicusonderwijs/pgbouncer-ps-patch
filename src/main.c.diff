@@ -1,8 +1,8 @@
 diff --git a/src/main.c b/src/main.c
-index fb76a56..ed2f922 100644
+index 3fc1a0c..ea173d7 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -184,6 +184,9 @@ char *cf_server_tls_cert_file;
+@@ -187,6 +187,9 @@ char *cf_server_tls_cert_file;
  char *cf_server_tls_key_file;
  char *cf_server_tls_ciphers;
  
@@ -12,7 +12,7 @@ index fb76a56..ed2f922 100644
  /*
   * config file description
   */
-@@ -318,6 +321,9 @@ CF_ABS("user", CF_STR, cf_username, CF_NO_RELOAD, NULL),
+@@ -324,6 +327,9 @@ CF_ABS("user", CF_STR, cf_username, CF_NO_RELOAD, NULL),
  #endif
  CF_ABS("verbose", CF_INT, cf_verbose, 0, NULL),
  
@@ -22,7 +22,7 @@ index fb76a56..ed2f922 100644
  {NULL}
  };
  
-@@ -891,10 +897,11 @@ int main(int argc, char *argv[])
+@@ -927,10 +933,11 @@ int main(int argc, char *argv[])
  			break;
  		case 'V':
  			printf("%s\n", PACKAGE_STRING);
@@ -36,7 +36,7 @@ index fb76a56..ed2f922 100644
  #ifdef USE_SYSTEMD
  			printf("systemd: yes\n");
  #endif
-@@ -1005,9 +1012,9 @@ int main(int argc, char *argv[])
+@@ -1041,9 +1048,9 @@ int main(int argc, char *argv[])
  
  	write_pidfile();
  

@@ -1,5 +1,5 @@
 diff --git a/src/stats.c b/src/stats.c
-index 95d5cf4..2273eaa 100644
+index 281b719..4a232b3 100644
 --- a/src/stats.c
 +++ b/src/stats.c
 @@ -30,6 +30,10 @@ static void reset_stats(PgStats *stat)
@@ -48,7 +48,7 @@ index 95d5cf4..2273eaa 100644
  }
  
  static void write_stats(PktBuf *buf, PgStats *stat, PgStats *old, char *dbname)
-@@ -369,6 +388,18 @@ static void refresh_stats(evutil_socket_t s, short flags, void *arg)
+@@ -360,6 +379,18 @@ static void refresh_stats(evutil_socket_t s, short flags, void *arg)
  			 avg.client_bytes, avg.server_bytes,
  			 avg.xact_time, avg.query_time,
  			 avg.wait_time);

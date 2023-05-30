@@ -1,8 +1,8 @@
 diff --git a/src/objects.c b/src/objects.c
-index 9a42856..cd6fb14 100644
+index b9b970a..4649226 100644
 --- a/src/objects.c
 +++ b/src/objects.c
-@@ -56,6 +56,10 @@ struct Slab *db_cache;
+@@ -60,6 +60,10 @@ struct Slab *peer_pool_cache;
  struct Slab *pool_cache;
  struct Slab *user_cache;
  struct Slab *iobuf_cache;
@@ -13,7 +13,7 @@ index 9a42856..cd6fb14 100644
  
  /*
   * libevent may still report events when event_del()
-@@ -88,6 +92,9 @@ static void construct_client(void *obj)
+@@ -92,6 +96,9 @@ static void construct_client(void *obj)
  	list_init(&client->head);
  	sbuf_init(&client->sbuf, client_proto);
  	client->state = CL_FREE;
@@ -23,7 +23,7 @@ index 9a42856..cd6fb14 100644
  }
  
  static void construct_server(void *obj)
-@@ -98,6 +105,9 @@ static void construct_server(void *obj)
+@@ -102,6 +109,9 @@ static void construct_server(void *obj)
  	list_init(&server->head);
  	sbuf_init(&server->sbuf, server_proto);
  	server->state = SV_FREE;
@@ -33,7 +33,7 @@ index 9a42856..cd6fb14 100644
  }
  
  /* compare string with PgUser->name, for usage with btree */
-@@ -140,6 +150,14 @@ void init_caches(void)
+@@ -146,6 +156,14 @@ void init_caches(void)
  	server_cache = slab_create("server_cache", sizeof(PgSocket), 0, construct_server, USUAL_ALLOC);
  	client_cache = slab_create("client_cache", sizeof(PgSocket), 0, construct_client, USUAL_ALLOC);
  	iobuf_cache = slab_create("iobuf_cache", IOBUF_SIZE, 0, do_iobuf_reset, USUAL_ALLOC);
@@ -48,7 +48,7 @@ index 9a42856..cd6fb14 100644
  }
  
  /* state change means moving between lists */
-@@ -185,6 +203,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
+@@ -191,6 +209,7 @@ void change_client_state(PgSocket *client, SocketState newstate)
  	switch (client->state) {
  	case CL_FREE:
  		varcache_clean(&client->vars);
@@ -56,7 +56,7 @@ index 9a42856..cd6fb14 100644
  		slab_free(client_cache, client);
  		break;
  	case CL_JUSTFREE:
-@@ -255,6 +274,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
+@@ -261,6 +280,7 @@ void change_server_state(PgSocket *server, SocketState newstate)
  	switch (server->state) {
  	case SV_FREE:
  		varcache_clean(&server->vars);
@@ -64,7 +64,7 @@ index 9a42856..cd6fb14 100644
  		slab_free(server_cache, server);
  		break;
  	case SV_JUSTFREE:
-@@ -1987,6 +2007,17 @@ void objects_cleanup(void)
+@@ -2197,6 +2217,17 @@ void objects_cleanup(void)
  	memset(&user_tree, 0, sizeof user_tree);
  	memset(&autodatabase_idle_list, 0, sizeof autodatabase_idle_list);
  

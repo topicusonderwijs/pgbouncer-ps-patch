@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index d41f29a..07c84e0 100644
+index 09cda99..ba09584 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -8,6 +8,8 @@ AC_CONFIG_SRCDIR(src/janitor.c)

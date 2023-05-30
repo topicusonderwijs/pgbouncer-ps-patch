@@ -1,8 +1,8 @@
 diff --git a/src/client.c b/src/client.c
-index 67434be..66fef2d 100644
+index 464d78d..4d2944c 100644
 --- a/src/client.c
 +++ b/src/client.c
-@@ -884,6 +884,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -924,6 +924,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  {
  	SBuf *sbuf = &client->sbuf;
  	int rfq_delta = 0;
@@ -12,7 +12,7 @@ index 67434be..66fef2d 100644
  
  	switch (pkt->type) {
  
-@@ -917,10 +920,66 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -957,10 +960,66 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	 * to buffer packets until sync or flush is sent by client
  	 */
  	case 'P':		/* Parse */
@@ -79,7 +79,7 @@ index 67434be..66fef2d 100644
  	case 'd':		/* CopyData(F/B) */
  		break;
  
-@@ -964,6 +1023,20 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -1004,6 +1063,20 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	client->link->ready = false;
  	client->link->idle_tx = false;
  

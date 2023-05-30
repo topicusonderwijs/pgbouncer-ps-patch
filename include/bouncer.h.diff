@@ -1,5 +1,5 @@
 diff --git a/include/bouncer.h b/include/bouncer.h
-index 42b5bf2..e4c109d 100644
+index f2c2bac..048ab8f 100644
 --- a/include/bouncer.h
 +++ b/include/bouncer.h
 @@ -96,6 +96,7 @@ typedef union PgAddr PgAddr;
@@ -19,7 +19,7 @@ index 42b5bf2..e4c109d 100644
  
  #ifndef WIN32
  #define DEFAULT_UNIX_SOCKET_DIR "/tmp"
-@@ -245,6 +248,10 @@ struct PgStats {
+@@ -254,6 +257,10 @@ struct PgStats {
  	usec_t xact_time;	/* total transaction time in us */
  	usec_t query_time;	/* total query time in us */
  	usec_t wait_time;	/* total time clients had to wait */
@@ -30,7 +30,7 @@ index 42b5bf2..e4c109d 100644
  };
  
  /*
-@@ -474,6 +481,10 @@ struct PgDatabase {
+@@ -490,6 +497,10 @@ struct PgDatabase {
  	struct AATree user_tree;	/* users that have been queried on this database */
  };
  
@@ -41,7 +41,7 @@ index 42b5bf2..e4c109d 100644
  
  /*
   * A client or server connection.
-@@ -551,6 +562,8 @@ struct PgSocket {
+@@ -567,6 +578,8 @@ struct PgSocket {
  
  	VarCache vars;		/* state of interesting server parameters */
  
@@ -50,7 +50,7 @@ index 42b5bf2..e4c109d 100644
  	SBuf sbuf;		/* stream buffer, must be last */
  };
  
-@@ -664,6 +677,9 @@ extern char *cf_server_tls_cert_file;
+@@ -683,6 +696,9 @@ extern char *cf_server_tls_cert_file;
  extern char *cf_server_tls_key_file;
  extern char *cf_server_tls_ciphers;
  

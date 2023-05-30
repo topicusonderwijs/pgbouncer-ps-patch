@@ -1,8 +1,8 @@
 diff --git a/include/objects.h b/include/objects.h
-index 33a0a3c..83b6096 100644
+index 7f64ce1..f2af816 100644
 --- a/include/objects.h
 +++ b/include/objects.h
-@@ -28,6 +28,10 @@ extern struct Slab *db_cache;
+@@ -32,6 +32,10 @@ extern struct Slab *peer_pool_cache;
  extern struct Slab *pool_cache;
  extern struct Slab *user_cache;
  extern struct Slab *iobuf_cache;
@@ -11,5 +11,5 @@ index 33a0a3c..83b6096 100644
 +extern struct Slab *client_ps_query_cache;
 +extern struct Slab *client_ps_param_cache;
  
+ PgDatabase *find_peer(int peer_id);
  PgDatabase *find_database(const char *name);
- PgUser *find_user(const char *name);
