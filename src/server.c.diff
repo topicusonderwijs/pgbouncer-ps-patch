@@ -1,5 +1,5 @@
 diff --git a/src/server.c b/src/server.c
-index 74f170d..89fe9e9 100644
+index 74f170d..c5d0b2e 100644
 --- a/src/server.c
 +++ b/src/server.c
 @@ -250,6 +250,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
@@ -12,7 +12,7 @@ index 74f170d..89fe9e9 100644
  
  	Assert(!server->pool->db->admin);
  
-@@ -346,13 +349,25 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -346,13 +349,27 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  		break;
  	/* chat packets */
  	case '2':		/* BindComplete */
@@ -28,17 +28,19 @@ index 74f170d..89fe9e9 100644
  	case 'n':		/* NoData */
 +		break;
  	case '1':		/* ParseComplete */
-+		oppl = list_pop(&server->ps_state.server_outstanding_parse_packets);
-+		if (oppl) {
-+			opp = container_of(oppl, struct OutstandingParsePacket, node);
-+			ignore_packet = opp->ignore;
-+			free(opp);
++		if (!cf_disable_prepared_statement_support) {
++			oppl = list_pop(&server->ps_state.server_outstanding_parse_packets);
++			if (oppl) {
++				opp = container_of(oppl, struct OutstandingParsePacket, node);
++				ignore_packet = opp->ignore;
++				free(opp);
++			}
 +		}
 +		break;
  	case 's':		/* PortalSuspended */
  
  	/* data packets, there will be more coming */
-@@ -372,6 +387,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -372,6 +389,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	} else if (client) {
  		if (client->state == CL_LOGIN) {
  			return handle_auth_query_response(client, pkt);
