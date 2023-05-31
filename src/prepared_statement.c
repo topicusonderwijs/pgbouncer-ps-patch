@@ -290,20 +290,13 @@ bool handle_bind_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
 		return false;
 	}
 
-	if (!pktbuf_send_immediate(buf, server)) {
-		pktbuf_free(buf);
-		return false;
-	}
-
-	pktbuf_free(buf);
-
 	/* update stats */
 	client->ps_state.binds_total++;
 	server->ps_state.binds_total++;
 	link_ps->bind_count++;  // is dit een stat? of functioneel een counter
 	client->pool->stats.ps_bind_count++;
 
-	return true;
+	return pktbuf_send_queued(buf, server);
 }
 
 bool handle_describe_command(PgSocket *client, PktHdr *pkt, const char *ps_name)
