@@ -52,6 +52,9 @@ typedef struct PreparedStatementSocketState
 	uint64_t closes_total;
 } PreparedStatementSocketState;
 
+#define is_prepared_statements_enabled(pool)                                                \
+	(pool_pool_mode(pool) == POOL_TX && pool_prepared_statement_cache_queries(pool) > 0)
+
 const char *ps_version(void);
 
 void ps_client_socket_state_init(struct PreparedStatementSocketState* state);

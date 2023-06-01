@@ -1,28 +1,25 @@
 diff --git a/src/main.c b/src/main.c
-index 3fc1a0c..ea173d7 100644
+index 3fc1a0c..69f67ea 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -187,6 +187,9 @@ char *cf_server_tls_cert_file;
+@@ -187,6 +187,8 @@ char *cf_server_tls_cert_file;
  char *cf_server_tls_key_file;
  char *cf_server_tls_ciphers;
  
-+int cf_disable_prepared_statement_support;
 +int cf_prepared_statement_cache_queries;
 +
  /*
   * config file description
   */
-@@ -324,6 +327,9 @@ CF_ABS("user", CF_STR, cf_username, CF_NO_RELOAD, NULL),
- #endif
- CF_ABS("verbose", CF_INT, cf_verbose, 0, NULL),
- 
-+CF_ABS("disable_prepared_statement_support", CF_INT, cf_disable_prepared_statement_support, 0, "1"),
-+CF_ABS("prepared_statement_cache_queries", CF_INT, cf_prepared_statement_cache_queries, 0, "100"),
-+
- {NULL}
- };
- 
-@@ -927,10 +933,11 @@ int main(int argc, char *argv[])
+@@ -274,6 +276,7 @@ CF_ABS("peer_id", CF_INT, cf_peer_id, 0, "0"),
+ CF_ABS("pidfile", CF_STR, cf_pidfile, CF_NO_RELOAD, ""),
+ CF_ABS("pkt_buf", CF_INT, cf_sbuf_len, CF_NO_RELOAD, "4096"),
+ CF_ABS("pool_mode", CF_LOOKUP(pool_mode_map), cf_pool_mode, 0, "session"),
++CF_ABS("prepared_statement_cache_queries", CF_INT, cf_prepared_statement_cache_queries, 0, "0"),
+ CF_ABS("query_timeout", CF_TIME_USEC, cf_query_timeout, 0, "0"),
+ CF_ABS("query_wait_timeout", CF_TIME_USEC, cf_query_wait_timeout, 0, "120"),
+ CF_ABS("cancel_wait_timeout", CF_TIME_USEC, cf_cancel_wait_timeout, 0, "10"),
+@@ -927,10 +930,11 @@ int main(int argc, char *argv[])
  			break;
  		case 'V':
  			printf("%s\n", PACKAGE_STRING);
@@ -36,7 +33,7 @@ index 3fc1a0c..ea173d7 100644
  #ifdef USE_SYSTEMD
  			printf("systemd: yes\n");
  #endif
-@@ -1041,9 +1048,9 @@ int main(int argc, char *argv[])
+@@ -1041,9 +1045,9 @@ int main(int argc, char *argv[])
  
  	write_pidfile();
  

@@ -1,5 +1,5 @@
 diff --git a/src/stats.c b/src/stats.c
-index 281b719..4a232b3 100644
+index 281b719..951d798 100644
 --- a/src/stats.c
 +++ b/src/stats.c
 @@ -30,6 +30,10 @@ static void reset_stats(PgStats *stat)
@@ -48,12 +48,29 @@ index 281b719..4a232b3 100644
  }
  
  static void write_stats(PktBuf *buf, PgStats *stat, PgStats *old, char *dbname)
-@@ -360,6 +379,18 @@ static void refresh_stats(evutil_socket_t s, short flags, void *arg)
+@@ -328,6 +347,7 @@ static void refresh_stats(evutil_socket_t s, short flags, void *arg)
+ 	PgPool *pool;
+ 	PgStats old_total, cur_total;
+ 	PgStats avg;
++	bool log_prepared_statement_stats = false;
+ 
+ 	reset_stats(&old_total);
+ 	reset_stats(&cur_total);
+@@ -343,6 +363,8 @@ static void refresh_stats(evutil_socket_t s, short flags, void *arg)
+ 		if (cf_log_stats) {
+ 			stat_add(&cur_total, &pool->stats);
+ 			stat_add(&old_total, &pool->older_stats);
++
++			log_prepared_statement_stats = log_prepared_statement_stats || is_prepared_statements_enabled(pool);
+ 		}
+ 	}
+ 
+@@ -360,6 +382,18 @@ static void refresh_stats(evutil_socket_t s, short flags, void *arg)
  			 avg.client_bytes, avg.server_bytes,
  			 avg.xact_time, avg.query_time,
  			 avg.wait_time);
 +    
-+		if (!cf_disable_prepared_statement_support) {
++		if (log_prepared_statement_stats) {
 +			log_info("prepared statement stats: %" PRIu64 " client parses/s (total %" PRIu64 "),"
 +				 " %" PRIu64 " server parses/s (total %" PRIu64 "),"
 +				 " %" PRIu64 " binds/s (total %" PRIu64 ")",

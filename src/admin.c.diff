@@ -1,8 +1,38 @@
 diff --git a/src/admin.c b/src/admin.c
-index 0cf2e8b..1bbb677 100644
+index 0cf2e8b..abc4e92 100644
 --- a/src/admin.c
 +++ b/src/admin.c
-@@ -616,8 +616,8 @@ static bool admin_show_users(PgSocket *admin, const char *arg)
+@@ -500,10 +500,11 @@ static bool admin_show_databases(PgSocket *admin, const char *arg)
+ 		return true;
+ 	}
+ 
+-	pktbuf_write_RowDescription(buf, "ssissiiisiiii",
++	pktbuf_write_RowDescription(buf, "ssissiiisiiiii",
+ 				    "name", "host", "port",
+ 				    "database", "force_user", "pool_size", "min_pool_size", "reserve_pool",
+-				    "pool_mode", "max_connections", "current_connections", "paused", "disabled");
++				    "pool_mode", "ps_cache_queries", "max_connections", "current_connections",
++				    "paused", "disabled");
+ 	statlist_for_each(item, &database_list) {
+ 		db = container_of(item, PgDatabase, head);
+ 
+@@ -512,13 +513,14 @@ static bool admin_show_databases(PgSocket *admin, const char *arg)
+ 		cv.value_p = &db->pool_mode;
+ 		if (db->pool_mode != POOL_INHERIT)
+ 			pool_mode_str = cf_get_lookup(&cv);
+-		pktbuf_write_DataRow(buf, "ssissiiisiiii",
++		pktbuf_write_DataRow(buf, "ssissiiisiiiii",
+ 				     db->name, db->host, db->port,
+ 				     db->dbname, f_user,
+ 				     db->pool_size >= 0 ? db->pool_size : cf_default_pool_size,
+ 				     db->min_pool_size >= 0 ? db->min_pool_size : cf_min_pool_size,
+ 				     db->res_pool_size >= 0 ? db->res_pool_size : cf_res_pool_size,
+ 				     pool_mode_str,
++					 db->prepared_statement_cache_queries >= 0 ? db->prepared_statement_cache_queries : cf_prepared_statement_cache_queries,
+ 				     database_max_connections(db),
+ 				     db->connection_count,
+ 				     db->db_paused,
+@@ -616,8 +618,8 @@ static bool admin_show_users(PgSocket *admin, const char *arg)
  	return true;
  }
  
@@ -13,7 +43,7 @@ index 0cf2e8b..1bbb677 100644
  
  static void socket_header(PktBuf *buf, bool debug)
  {
-@@ -848,6 +848,107 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
+@@ -848,6 +850,108 @@ static bool admin_show_active_sockets(PgSocket *admin, const char *arg)
  	return true;
  }
  
@@ -30,7 +60,13 @@ index 0cf2e8b..1bbb677 100644
 +
 +static void socket_ps_row(PktBuf *buf, PgSocket *sk, const char *state)
 +{
-+	int cache_size = is_server_socket(sk) ? \
++	int cache_size;
++
++	if (!is_prepared_statements_enabled(sk->pool)) {
++		return;
++	}
++
++	cache_size = is_server_socket(sk) ? \
 +		HASH_COUNT(sk->ps_state.server_ps_entries) : HASH_COUNT(sk->ps_state.client_ps_entries);
 +
 +	pktbuf_write_DataRow(buf, PSF_STD,
@@ -88,11 +124,6 @@ index 0cf2e8b..1bbb677 100644
 +/* Command: SHOW SERVER PS */
 +static bool admin_show_server_ps(PgSocket *admin, const char *arg)
 +{
-+	if (cf_disable_prepared_statement_support) {
-+		admin_error(admin, "prepared statement support has been disabled");
-+		return true;
-+	}
-+
 +	struct List *item;
 +	PgPool *pool;
 +	PktBuf *buf = pktbuf_dynamic(256);
@@ -121,7 +152,7 @@ index 0cf2e8b..1bbb677 100644
  /* Command: SHOW POOLS */
  static bool admin_show_pools(PgSocket *admin, const char *arg)
  {
-@@ -1474,6 +1575,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
+@@ -1474,6 +1578,7 @@ static bool admin_show_totals(PgSocket *admin, const char *arg)
  
  static struct cmd_lookup show_map [] = {
  	{"clients", admin_show_clients},
@@ -129,7 +160,7 @@ index 0cf2e8b..1bbb677 100644
  	{"config", admin_show_config},
  	{"databases", admin_show_databases},
  	{"fds", admin_show_fds},
-@@ -1483,6 +1585,7 @@ static struct cmd_lookup show_map [] = {
+@@ -1483,6 +1588,7 @@ static struct cmd_lookup show_map [] = {
  	{"peer_pools", admin_show_peer_pools},
  	{"pools", admin_show_pools},
  	{"servers", admin_show_servers},

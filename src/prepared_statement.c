@@ -102,9 +102,9 @@ static bool register_prepared_statement(PgSocket *server, PgServerPreparedStatem
 {
 	struct PgServerPreparedStatement *current, *tmp;
 	PktBuf *buf;
-	unsigned int cached_query_count = HASH_COUNT(server->ps_state.server_ps_entries);
+	int cached_query_count = HASH_COUNT(server->ps_state.server_ps_entries);
 
-	if (cached_query_count >= (unsigned int)cf_prepared_statement_cache_queries) {
+	if (cached_query_count >= pool_prepared_statement_cache_queries(server->pool)) {
 		HASH_SORT(server->ps_state.server_ps_entries, bind_count_sort);
 		HASH_ITER(hh, server->ps_state.server_ps_entries, current, tmp) {
 			HASH_DEL(server->ps_state.server_ps_entries, current);
@@ -387,6 +387,8 @@ void ps_client_free(PgSocket *client)
 
 void ps_server_free(PgSocket *server)
 {
+	int opp_cnt = 0;
+
 	struct PgServerPreparedStatement *current, *tmp_s;
 	struct List *el, *tmp_l;
 	struct OutstandingParsePacket *opp;
@@ -398,7 +400,6 @@ void ps_server_free(PgSocket *server)
 	}
 	slog_noise(server, "ps_server_free: freed %d prepared statements", item_cnt);
 
-	int opp_cnt = 0;
 	list_for_each_safe(el, &server->ps_state.server_outstanding_parse_packets, tmp_l) {
 		opp = container_of(el, struct OutstandingParsePacket, node);
 		list_del(&opp->node);

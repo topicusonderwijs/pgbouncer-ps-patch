@@ -275,18 +275,19 @@ PktBuf *create_parse_packet(PgSocket *client, uint64_t dst_ps_id, PgParsePacket 
 	PgQueryExtent *query_extent;
 	PgParamDataTypeList *paramTypes;
 	uint16_t offset = 0;
+	PktBuf *buf;
+	int pkt_len;
+	uint64_t query_offset = 0;
 
 	dst_ps_name(dst_ps_id);
 
 	slog_noise(client, "create_parse_packet: statement=%s, query_len=%llu, params=%d", dst_ps_name, pkt->query_len, pkt->num_parameters);
 
-	PktBuf *buf;
-	int pkt_len = 5 + strlen(dst_ps_name) + 1 + pkt->query_len + 1 + sizeof(u_int16_t) + (pkt->num_parameters * sizeof(u_int32_t));
+	pkt_len = 5 + strlen(dst_ps_name) + 1 + pkt->query_len + 1 + sizeof(u_int16_t) + (pkt->num_parameters * sizeof(u_int32_t));
 	buf = pktbuf_dynamic(pkt_len);
 	pktbuf_start_packet(buf, 'P');
 	pktbuf_put_string(buf, dst_ps_name);
 
-	uint64_t query_offset = 0;
 	query_extent = pkt->query;
 	while (query_offset < pkt->query_len) {
 		int len = pkt->query_len - query_offset > QUERY_EXTENT_SIZE ? QUERY_EXTENT_SIZE : pkt->query_len - query_offset;
@@ -324,9 +325,10 @@ PktBuf *create_parse_complete_packet(void)
 
 PktBuf *create_describe_packet(uint64_t dst_ps_id)
 {
+	PktBuf *buf;
+
 	dst_ps_name(dst_ps_id);
 
-	PktBuf *buf;
 	buf = pktbuf_dynamic(6 + strlen(dst_ps_name));
 	pktbuf_start_packet(buf, 'D');
 	pktbuf_put_char(buf, 'S');
@@ -337,9 +339,10 @@ PktBuf *create_describe_packet(uint64_t dst_ps_id)
 
 PktBuf *create_close_packet(uint64_t dst_ps_id)
 {
+	PktBuf *buf;
+
 	dst_ps_name(dst_ps_id);
 
-	PktBuf *buf;
 	buf = pktbuf_dynamic(6 + strlen(dst_ps_name));
 	pktbuf_start_packet(buf, 'C');
 	pktbuf_put_char(buf, 'S');
@@ -366,6 +369,8 @@ bool copy_bind_packet(PgSocket *client, PktBuf **buf_p, uint64_t dst_ps_id, PktH
 	uint16_t i, len_param_fmt_codes, len_param_values, len_result_column_format_codes, val;
 	uint32_t val32;
 
+	dst_ps_name(dst_ps_id);
+
 	if (!handle_incomplete_packet(client, pkt))
 		return false;
 
@@ -384,7 +389,7 @@ bool copy_bind_packet(PgSocket *client, PktBuf **buf_p, uint64_t dst_ps_id, PktH
 
 	if (!mbuf_get_string(&pkt->data, &statement))
 		goto failed;
-	dst_ps_name(dst_ps_id);
+
 	pktbuf_put_string(buf, dst_ps_name);
 
 	/* Number of parameter format codes */

@@ -1,5 +1,5 @@
 diff --git a/include/bouncer.h b/include/bouncer.h
-index f2c2bac..048ab8f 100644
+index f2c2bac..721a1ed 100644
 --- a/include/bouncer.h
 +++ b/include/bouncer.h
 @@ -96,6 +96,7 @@ typedef union PgAddr PgAddr;
@@ -30,7 +30,23 @@ index f2c2bac..048ab8f 100644
  };
  
  /*
-@@ -490,6 +497,10 @@ struct PgDatabase {
+@@ -438,6 +445,7 @@ struct PgUser {
+ 	bool has_scram_keys;		/* true if the above two are valid */
+ 	bool mock_auth;			/* not a real user, only for mock auth */
+ 	int pool_mode;
++	int prepared_statement_cache_queries;	/* prepared statement cache size in transaction mode */
+ 	int max_user_connections;	/* how much server connections are allowed */
+ 	int connection_count;	/* how much connections are used by user now */
+ };
+@@ -464,6 +472,7 @@ struct PgDatabase {
+ 	int min_pool_size;	/* min server connections in one pool */
+ 	int res_pool_size;	/* additional server connections in case of trouble */
+ 	int pool_mode;		/* pool mode for this database */
++	int prepared_statement_cache_queries;	/* prepared statement cache size in transaction mode */
+ 	int max_db_connections;	/* max server connections between all pools */
+ 	char *connect_query;	/* startup commands to send to server after connect */
+ 
+@@ -490,6 +499,10 @@ struct PgDatabase {
  	struct AATree user_tree;	/* users that have been queried on this database */
  };
  
@@ -41,7 +57,7 @@ index f2c2bac..048ab8f 100644
  
  /*
   * A client or server connection.
-@@ -567,6 +578,8 @@ struct PgSocket {
+@@ -567,6 +580,8 @@ struct PgSocket {
  
  	VarCache vars;		/* state of interesting server parameters */
  
@@ -50,11 +66,10 @@ index f2c2bac..048ab8f 100644
  	SBuf sbuf;		/* stream buffer, must be last */
  };
  
-@@ -683,6 +696,9 @@ extern char *cf_server_tls_cert_file;
+@@ -683,6 +698,8 @@ extern char *cf_server_tls_cert_file;
  extern char *cf_server_tls_key_file;
  extern char *cf_server_tls_ciphers;
  
-+extern int cf_disable_prepared_statement_support;
 +extern int cf_prepared_statement_cache_queries;
 +
  extern const struct CfLookup pool_mode_map[];

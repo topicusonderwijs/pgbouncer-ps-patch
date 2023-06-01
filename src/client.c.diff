@@ -1,5 +1,5 @@
 diff --git a/src/client.c b/src/client.c
-index 464d78d..03d9a82 100644
+index 464d78d..f183129 100644
 --- a/src/client.c
 +++ b/src/client.c
 @@ -924,6 +924,9 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
@@ -16,7 +16,7 @@ index 464d78d..03d9a82 100644
  	 * to buffer packets until sync or flush is sent by client
  	 */
  	case 'P':		/* Parse */
-+		if (!cf_disable_prepared_statement_support) {
++		if (is_prepared_statements_enabled(client->pool)) {
 +			if (!inspect_parse_packet(client, pkt, ps_name))
 +				return false;
 +		}
@@ -26,7 +26,7 @@ index 464d78d..03d9a82 100644
 +		break;
 +
  	case 'C':		/* Close */
-+		if (!cf_disable_prepared_statement_support) {
++		if (is_prepared_statements_enabled(client->pool)) {
 +			if (!unmarshall_close_packet(client, pkt, &close_packet))
 +				return false;
 +
@@ -43,7 +43,7 @@ index 464d78d..03d9a82 100644
 +		break;
 +
  	case 'B':		/* Bind */
-+		if (!cf_disable_prepared_statement_support) {
++		if (is_prepared_statements_enabled(client->pool)) {
 +			if (!inspect_bind_packet(client, pkt, ps_name))
 +				return false;
 +
@@ -60,7 +60,7 @@ index 464d78d..03d9a82 100644
 +		break;
 +
  	case 'D':		/* Describe */
-+		if (!cf_disable_prepared_statement_support) {
++		if (is_prepared_statements_enabled(client->pool)) {
 +			if (!inspect_describe_packet(client, pkt, ps_name))
 +				return false;
 +
@@ -79,11 +79,12 @@ index 464d78d..03d9a82 100644
  	case 'd':		/* CopyData(F/B) */
  		break;
  
-@@ -1004,6 +1063,20 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
+@@ -1004,6 +1063,21 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
  	client->link->ready = false;
  	client->link->idle_tx = false;
  
-+	if (!cf_disable_prepared_statement_support && strlen(ps_name)>0) {
++	/* handle prepared statement related packets once a server has been acquired */
++	if (strlen(ps_name)>0) {
 +		switch (pkt->type)
 +		{
 +		case 'P':

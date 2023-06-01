@@ -1,8 +1,24 @@
 diff --git a/src/server.c b/src/server.c
-index 74f170d..c5d0b2e 100644
+index 74f170d..87009a3 100644
 --- a/src/server.c
 +++ b/src/server.c
-@@ -250,6 +250,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -225,6 +225,15 @@ int pool_res_pool_size(PgPool *pool)
+ 		return pool->db->res_pool_size;
+ }
+ 
++int pool_prepared_statement_cache_queries(PgPool *pool)
++{
++	if (pool->user->prepared_statement_cache_queries >= 0)
++		return pool->user->prepared_statement_cache_queries;
++	if (pool->db->prepared_statement_cache_queries >= 0)
++		return pool->db->prepared_statement_cache_queries;
++	return cf_prepared_statement_cache_queries;
++}
++
+ int database_max_connections(PgDatabase *db)
+ {
+ 	if (db->max_db_connections <= 0)
+@@ -250,6 +259,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	SBuf *sbuf = &server->sbuf;
  	PgSocket *client = server->link;
  	bool async_response = false;
@@ -12,7 +28,7 @@ index 74f170d..c5d0b2e 100644
  
  	Assert(!server->pool->db->admin);
  
-@@ -346,13 +349,27 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -346,13 +358,27 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  		break;
  	/* chat packets */
  	case '2':		/* BindComplete */
@@ -28,7 +44,7 @@ index 74f170d..c5d0b2e 100644
  	case 'n':		/* NoData */
 +		break;
  	case '1':		/* ParseComplete */
-+		if (!cf_disable_prepared_statement_support) {
++		if (is_prepared_statements_enabled(server->pool)) {
 +			oppl = list_pop(&server->ps_state.server_outstanding_parse_packets);
 +			if (oppl) {
 +				opp = container_of(oppl, struct OutstandingParsePacket, node);
@@ -40,7 +56,7 @@ index 74f170d..c5d0b2e 100644
  	case 's':		/* PortalSuspended */
  
  	/* data packets, there will be more coming */
-@@ -372,6 +389,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
+@@ -372,6 +398,9 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
  	} else if (client) {
  		if (client->state == CL_LOGIN) {
  			return handle_auth_query_response(client, pkt);
