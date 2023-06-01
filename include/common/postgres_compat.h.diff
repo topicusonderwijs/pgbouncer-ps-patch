@@ -1,0 +1,27 @@
+diff --git a/include/common/postgres_compat.h b/include/common/postgres_compat.h
+index 71afe25..4831711 100644
+--- a/include/common/postgres_compat.h
++++ b/include/common/postgres_compat.h
+@@ -12,6 +12,7 @@
+ #define uint8 uint8_t
+ #define uint16 uint16_t
+ #define uint32 uint32_t
++#define uint64 uint64_t
+ 
+ #define lengthof(array) (sizeof (array) / sizeof ((array)[0]))
+ #define pg_hton32(x) htobe32(x)
+@@ -33,3 +34,14 @@
+ 
+ /* define this to use non-server code paths */
+ #define FRONTEND
++
++#define INT64CONST(x)  (x##LL)
++#define UINT64CONST(x) (x##ULL)
++
++
++/* from builtins.h */
++
++/* Sign + the most decimal digits an 8-byte number could have */
++#define MAXINT8LEN 20
++
++extern int pg_ulltoa_n(uint64 value, char *a);
