@@ -41,7 +41,6 @@ NEWFILES="\
   src/common/numutils.c\
   src/protocol_message.c\
   src/prepared_statement.c\
-  test/prepared_statement/test.ini\
   test/test_prepared_statement.py\
   "
 echo -n "copying pgbouncer-ps files: "
