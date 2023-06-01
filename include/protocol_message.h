@@ -21,6 +21,8 @@
  * (https://www.postgresql.org/docs/current/protocol.html)
  */
 
+#include "common/postgres_compat.h"
+
 #define MAX_STATEMENT_NAME	24
 
 #define QUERY_EXTENT_SIZE 256
@@ -55,9 +57,11 @@ typedef struct PgClosePacket
 	char name[MAX_STATEMENT_NAME];
 } PgClosePacket;
 
+// TODO: definition and assignment in single macro perhaps not the best way, compiler complains about C99
 #define dst_ps_name(dst_ps_id)                                             \
-	char dst_ps_name[MAX_STATEMENT_NAME];                                  \
-	snprintf(dst_ps_name, sizeof(dst_ps_name), "B_%lld", dst_ps_id);
+	char dst_ps_name[MAX_STATEMENT_NAME] = "B_";                           \
+	int l; l = pg_ulltoa_n(dst_ps_id, dst_ps_name+2);                      \
+	dst_ps_name[2+l] = '\n';
 
 void ps_init(void);
 

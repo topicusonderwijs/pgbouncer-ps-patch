@@ -12,6 +12,7 @@ MERGEFILES="\
   Makefile\
   configure.ac\
   etc/pgbouncer.ini\
+  include/common/postgres_compat.h\
   include/bouncer.h\
   include/objects.h\
   include/sbuf.h\
@@ -28,9 +29,9 @@ NEWFILES="\
   include/protocol_message.h\
   include/prepared_statement.h\
   include/common/uthash.h\
+  src/common/numutils.c\
   src/protocol_message.c\
   src/prepared_statement.c\
-  test/prepared_statement/test.ini\
   test/test_prepared_statement.py\
   "
 
