@@ -1,6 +1,7 @@
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/topicus-education-ops/pgbouncer-ps-patch/blob/master/LICENSE.md)
 [![Generic badge](https://img.shields.io/badge/release-1.19.0-blue.svg)](https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_1_19_0)
 
+ℹ️ A massively inmproved version of prepared statement support is available in PgBouncer 1.21+
 
 # PgBouncer with prepared statement support
 Unfortunately [PgBouncer](https://www.pgbouncer.org/) does not support prepared statements in transaction pooling mode, as stated in the FAQ:
